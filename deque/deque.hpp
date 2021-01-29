@@ -20,6 +20,7 @@ public:
 	using difference_type	= int;
 
 private:
+	// struct Wrap;
 	struct Block;
 
 	size_type __size;
@@ -112,6 +113,13 @@ public:
 };
 
 
+
+
+
+
+
+
+
 	template <typename T>
 	struct deque<T>::Block {
 		static constexpr size_type CONTENT_LIMIT	= 1000;
@@ -122,25 +130,26 @@ public:
 		class noinit_tag {};
 
 		Self *prev, *succ;
-		pointer __data, __beg, __end;
+		pointer *__data, *__beg, *__end;
 
 		Block();
 		Block(noinit_tag);
-		Block(const_pointer, size_type);
+		Block(pointer *, size_type);
 		Block(const Self &);
 		~Block();
 
 		auto clone() const -> Self*;
-		auto data() const -> pointer { return __beg; }
+		auto data() const -> pointer* { return __beg; }
 		auto size() const -> size_type { return __end - __beg; }
 		auto cap_back() const -> size_type { return __data + BLOCK_SIZE - __end; }
+		auto clear() -> void { __beg = __end = __data + HALF_BLOCK_SIZE; }
 
 		auto link(Self *) -> Self*;
 		auto cut() -> Self*;
 
-		auto append_unchecked(const_pointer, size_type) -> void;
-		auto append(const_pointer, size_type) -> void;
-		auto move_data_in_block(pointer) -> void;
+		auto append_unchecked(pointer *, size_type, bool) -> void;
+		auto append(pointer *, size_type, bool) -> void;
+		auto move_data_in_block(pointer *) -> void;
 		auto reserve(size_type) -> void;
 
 		auto adjust() -> void;
@@ -148,8 +157,8 @@ public:
 		auto merge() -> Self*;
 		auto split(size_type) -> Self*;
 
-		auto push_front(const value_type &) -> void;
-		auto push_back(const value_type &) -> void;
+		auto push_front(const value_type &value) -> void { *--__beg = new value_type(value); adjust(); }
+		auto push_back(const value_type &value) -> void { *__end++ = new value_type(value); adjust(); }
 
 		auto pop_front() -> void;
 		auto pop_back() -> void;
@@ -166,9 +175,7 @@ public:
 	template <typename T>
 	deque<T>::Block::Block()
 		: prev(nullptr), succ(nullptr),
-			__data(static_cast<pointer>(std::malloc(sizeof(value_type) * BLOCK_SIZE))),
-			// __data(reinterpret_cast<pointer>(new unsigned char[BLOCK_SIZE * sizeof(value_type)])),
-			// __data(new value_type[BLOCK_SIZE]),
+			__data(new value_type*[BLOCK_SIZE]),
 				__beg(__data + HALF_BLOCK_SIZE), __end(__beg) {}
 
 	template <typename T>
@@ -176,49 +183,43 @@ public:
 		: prev(nullptr), succ(nullptr), __data(nullptr), __beg(nullptr), __end(nullptr) {}
 
 	template <typename T>
-	deque<T>::Block::Block(const_pointer src, size_type n): Block() {
+	deque<T>::Block::Block(pointer *src, size_type n): Block() {
 		__beg = __end = __data + HALF_BLOCK_SIZE - n / 2;
-		append_unchecked(src, n);
+		append_unchecked(src, n, true);
 	}
 
 	template <typename T>
 	deque<T>::Block::Block(const Self &other)
 		: prev(nullptr), succ(nullptr),
-			__data(other.__data != nullptr ? static_cast<pointer>(std::malloc(sizeof(value_type) * BLOCK_SIZE)) : nullptr),
-			// __data(other.__data != nullptr ? reinterpret_cast<pointer>(new unsigned char[BLOCK_SIZE * sizeof(value_type)]) : nullptr),
-			// __data(other.__data != nullptr ? new value_type[BLOCK_SIZE] : nullptr),
-				__beg(other.__data != nullptr ? __data + HALF_BLOCK_SIZE : nullptr), __end(__beg) {
+			__data(other.__data != nullptr ? new value_type*[BLOCK_SIZE] : nullptr),
+				__beg(nullptr), __end(nullptr) {
 					if (other.__data != nullptr) {
 						__beg = __end = __data + HALF_BLOCK_SIZE - other.size() / 2;
-						append_unchecked(other.data(), other.size());
+						append_unchecked(other.data(), other.size(), false);
 					}
 				}
 
 	template <typename T>
 	deque<T>::Block::~Block() {
-		for (; __end != __beg; )
-			(--__end)->~value_type();
-		std::free(__data);
-		// delete[] reinterpret_cast<unsigned char*>(__data);
-		// delete[] __data;
+		for (auto p = __beg; p != __end; ++p) delete *p;
+		delete[] __data;
 	}
-
 
 	template <typename T>
 	auto deque<T>::Block::clone() const -> Self* {
 		Self *target = new Block(*this);
-		if (succ != nullptr) target->link(succ->clone());
+		if (succ != nullptr) {
+			target->succ = succ->clone();
+			target->succ->prev = target;
+		}
 		return target;
 	}
+
 
 	template <typename T>
 	auto deque<T>::Block::link(Self *target) -> Self* {
 		if (target == nullptr)
-#ifdef DEBUG
 			throw "call Block::link() with a null pointer: this will cause original successor lost!";
-#else
-			return nullptr;
-#endif
 		Self *u = succ; succ = target; target->succ = u;
 		target->prev = this; if (u != nullptr) u->prev = target;
 		return target;
@@ -227,11 +228,7 @@ public:
 	template <typename T>
 	auto deque<T>::Block::cut() -> Self* {
 		if (succ == nullptr)
-#ifdef DEBUG
 			throw "call Block::cut() on a block without succ block: this will cut nothing";
-#else
-			return nullptr;
-#endif
 		Self *target = succ, *u = target->succ;
 		succ = u; if (u != nullptr) u->prev = this;
 		target->prev = target->succ = nullptr;
@@ -240,39 +237,36 @@ public:
 
 
 	template <typename T>
-	auto deque<T>::Block::append_unchecked(const_pointer src, size_type n) -> void {
-		for (; n > 0; --n)
-			new(__end++) value_type(*src++);
+	auto deque<T>::Block::append_unchecked(pointer *__src, size_type n, bool move) -> void {
+		if (move) for (; n > 0; --n) *__end++ = *__src++;
+		else for (; n > 0; --n)
+				*__end++ = new value_type(**__src++);
 	}
 
 	template <typename T>
-	auto deque<T>::Block::append(const_pointer src, size_type n) -> void {
+	auto deque<T>::Block::append(pointer *__src, size_type n, bool move) -> void {
 		for (; n > 0; ) {
 			auto step = std::min(n, cap_back());
-			append_unchecked(src, step);
+			append_unchecked(__src, step, move);
 			adjust();
-			src += step; n -= step;
+			__src += step; n -= step;
 		}
 	}
 
 	template <typename T>
-	auto deque<T>::Block::move_data_in_block(pointer __dst) -> void {
+	auto deque<T>::Block::move_data_in_block(pointer *__dst) -> void {
 		if (__dst < __data or __data + BLOCK_SIZE <= __dst)
-#ifdef DEBUG
 			throw "call Block::move_data_in_block(): __dst not in block";
-#else
-			return;
-#endif
 		if (__beg < __dst) {
 			auto o_beg = __beg, o_end = __end;
 			__beg = __end = __dst + size();
 			for (; o_beg != o_end; )
-				new(--__beg) value_type(*--o_end);
+				*--__beg = *--o_end;
 		} else if (__beg > __dst) {
 			auto o_beg = __beg, o_end = __end;
 			__beg = __end = __dst;
 			for (; o_beg != o_end; )
-				new(__end++) value_type(*o_beg++);
+				*__end++ = *o_beg++;
 		}
 	}
 
@@ -280,11 +274,7 @@ public:
 	auto deque<T>::Block::reserve(size_type __size) -> void {
 		if (__size <= size()) return;
 		if (__size > BLOCK_SIZE)
-#ifdef DEBUG
 			throw "call Block::reserve(): reserve size too large";
-#else
-			return;
-#endif
 		move_data_in_block(__data + HALF_BLOCK_SIZE - __size / 2);
 	}
 
@@ -304,13 +294,10 @@ public:
 	template <typename T>
 	auto deque<T>::Block::merge() -> Self* {
 		if (succ == nullptr)
-#ifdef DEBUG
 			throw "call Block::merge() on a block without succ block";
-#else
-			return this;
-#endif
 		Block *target = cut();
-		append(target->data(), target->size());
+		append(target->data(), target->size(), true);
+		target->clear();
 		delete target;
 		return this;
 	}
@@ -318,50 +305,25 @@ public:
 	template <typename T>
 	auto deque<T>::Block::split(size_type pos) -> Self* {
 		if (pos > size())
-#ifdef DEBUG
 			throw "call Block::split() with argument pos too big";
-#else
-			return this;
-#endif
 		link(new Block(__beg + pos, size() - pos));
 		__end = __beg + pos;
 		return succ;
 	}
 
-
-	template <typename T>
-	auto deque<T>::Block::push_front(const value_type &value) -> void {
-		new(--__beg) value_type(value);
-		adjust();
-	}
-
-	template <typename T>
-	auto deque<T>::Block::push_back(const value_type &value) -> void {
-		new(__end++) value_type(value);
-		adjust();
-	}
-
 	template <typename T>
 	auto deque<T>::Block::pop_front() -> void {
 		if (size() == 0)
-#ifdef DEBUG
 			throw "call Block::pop_front() on an empty block";
-#else
-			return;
-#endif
-		(__beg++)->~value_type();
+		delete *__beg++;
 		adjust();
 	}
 
 	template <typename T>
 	auto deque<T>::Block::pop_back() -> void {
 		if (size() == 0)
-#ifdef DEBUG
 			throw "call Block::pop_back() on an empty block";
-#else
-			return;
-#endif
-		(--__end)->~value_type();
+		delete *--__end;
 		adjust();
 	}
 
@@ -370,30 +332,22 @@ public:
 	auto deque<T>::Block::insert(size_type pos, const value_type &value) -> void {
 		if (pos > size()) {
 			if (succ == nullptr)
-#ifdef DEBUG
 				throw "in Block::insert(): argument pos too big";
-#else
-				return;
-#endif
 			return succ->insert(pos - size(), value);
 		}
-		if (prev == nullptr and pos == 0) {
-			Self *u = new Block;
-			if (u == nullptr) puts("\033[1mGGGGGG\033[0m");
-			link(u);
-			return u->insert(0, value);
-		}
+		if (prev == nullptr and pos == 0)
+			return link(new Block)->insert(0, value);
 
 		if (pos * 2 < size()) {
 			for (auto p = __beg; p != __beg + pos; ++p)
-				new(p) value_type(*(p + 1));
+				*(p - 1) = *p;
 			--__beg;
 		} else {
 			for (auto p = __end; p != __beg + pos; --p)
-				new(p) value_type(*(p - 1));
+				*p = *(p - 1);
 			__end++;
 		}
-		new(__beg + pos) value_type(value);
+		__beg[pos] = new value_type(value);
 
 		adjust();
 	}
@@ -402,22 +356,19 @@ public:
 	auto deque<T>::Block::erase(size_type pos) -> void {
 		if (pos >= size()) {
 			if (succ == nullptr)
-#ifdef DEBUG
 				throw "in Block::erase(): argument pos too big";
-#else
-				return;
-#endif
 			return succ->erase(pos - size());
 		}
 
+		delete __beg[pos];
 		if (pos * 2 < size()) {
 			for (auto p = __beg + pos; p != __beg; --p)
-				new(p) value_type(*(p - 1));
-			++__beg;
+				*p = *(p - 1);
+			__beg++;
 		} else {
 			--__end;
 			for (auto p = __beg + pos; p != __end; ++p)
-				new(p) value_type(*(p + 1));
+				*p = *(p + 1);
 		}
 
 		adjust();
@@ -427,31 +378,31 @@ public:
 	auto deque<T>::Block::at(size_type pos) -> reference {
 		if (pos >= size()) {
 			if (succ == nullptr)
-#ifdef DEBUG
 				throw "in Block::at(): argument pos too big";
-#else
-				return __beg[size() - 1];
-#endif
 			return succ->at(pos - size());
 		}
-		return __beg[pos];
+		return *__beg[pos];
 	}
 
 	template <typename T>
 	auto deque<T>::Block::at(size_type pos) const -> const_reference {
 		if (pos >= size()) {
 			if (succ == nullptr)
-#ifdef DEBUG
 				throw "in Block::at(): argument pos too big";
-#else
-				return __beg[size() - 1];
-#endif
 			return succ->at(pos - size());
 		}
-		return __beg[pos];
+		return *__beg[pos];
 	}
 
 /* } */
+
+
+
+
+
+
+
+
 
 	template <typename T>
 	class deque<T>::iterator {
@@ -525,6 +476,10 @@ public:
 
 /* } */
 
+
+
+
+
 	template <typename T>
 	class deque<T>::const_iterator {
 		friend class deque;
@@ -557,7 +512,7 @@ public:
 		auto operator += (difference_type diff) -> Self& { return pos += diff, *this; }
 		auto operator -= (difference_type diff) -> Self& { return pos -= diff, *this; }
 
-		// return th distance between two iterator,
+		// return the distance between two iterator,
 		// if these two iterators points to different vectors, throw invaild_iterator.
 		auto operator - (const Self &rhs) const -> difference_type {
 			if (par != rhs.par) throw invalid_iterator();
@@ -597,6 +552,15 @@ public:
 	}
 
 /* } */
+
+
+
+
+
+
+
+
+
 
 /* impl deque<T> { */
 

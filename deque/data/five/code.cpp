@@ -21,17 +21,17 @@ class T{
 private:
 	int x;
 public:
-	T(int x):x(x){}	
+	T(int x):x(x){}
 	int num()const {return x;}
 	void change(int y){
-		x = y;	
+		x = y;
 	}
 };
 bool operator == (const T &a, const T &b){
-	return a.num() == b.num();	
+	return a.num() == b.num();
 }
 bool operator != (const T &a, const T &b){
-	return a.num() != b.num();	
+	return a.num() != b.num();
 }
 sjtu::deque<T> q;
 std::deque<T> stl;
@@ -63,7 +63,7 @@ void test1(){
 	if(!equal()){puts("Wrong Answer");return;}
 	while (!q.empty()){
 		q.pop_back();
-		stl.pop_back();	
+		stl.pop_back();
 	}
 	puts("Accept");
 }
@@ -73,7 +73,7 @@ void test2(){
 	try{
 		int t = q.front().num();
 	}catch(...){flag ++;}
-	
+
 	try{
 		int t = q.back().num();
 	}catch(...){flag ++;}
@@ -86,7 +86,7 @@ void test2(){
 	}
 	flag = 0;
 	try{
-		int t = (q.at(q.size() + 100)).num();	
+		int t = (q.at(q.size() + 100)).num();
 	}catch(...){flag = 1;}
 	if(flag != 1 && need_to_check_throw){puts("Wrong Answer");return;}
 	int num = q.size();
@@ -114,7 +114,7 @@ void test3(){
 	bool flag=0;
 	sjtu::deque<T> other;
 	try{
-		int t = q.begin() - other.begin();	
+		int t = q.begin() - other.begin();
 	}catch(...){
 		flag=1;
 	}
@@ -139,12 +139,12 @@ void test3(){
 		it_q -> change(t);;
 		it_stl -> change(t);
 		if(*it_q != *it_stl) {puts("Wrong Answer");return;}
-	} 
+	}
 	if(!equal()) {puts("Wrong Answer");return;}
-	if (!(q.begin() + 10 == q.begin() +5 + 6 - 1)) {puts("Wrong Answer");return;} 
+	if (!(q.begin() + 10 == q.begin() +5 + 6 - 1)) {puts("Wrong Answer");return;}
 	sjtu::deque<T> pp;
-	if(q.end() == pp.end()){puts("Wrong Answer");return;} 
-	
+	if(q.end() == pp.end()){puts("Wrong Answer");return;}
+
 	int t = rand() % (q.size() - 1);
 	it_q = q.begin() + t;
 	it_stl = stl.begin() + t;
@@ -185,7 +185,7 @@ void test4(){
 	_it_q = --_q.cend();
 	_it_stl = --_stl.cend();
 	if(*_it_q != *_it_stl) {puts("Wrong Answer");return;}
-	if (!(_q.cbegin() + 10 == _q.cbegin() +5 + 6 - 1)) {puts("Wrong Answer");return;} 
+	if (!(_q.cbegin() + 10 == _q.cbegin() +5 + 6 - 1)) {puts("Wrong Answer");return;}
 	puts("Accept");
 }
 
@@ -214,7 +214,7 @@ void test5(){
 		it_stl = stl.begin() + t;
 		it_q = q.insert(it_q, T(t));
 		it_stl = stl.insert(it_stl, T(t));
-		
+
 		it_q = q.insert(it_q, T(t + 1));
 		it_stl = stl.insert(it_stl, T(t + 1));
 	}
@@ -249,7 +249,7 @@ void test6(){
 		stl.push_back(T(t));
 		stl.insert(stl.begin() + t, T(t));
 	}
-	
+
 	q = p;
 	p.clear();
 	q=q=q=q;
@@ -318,7 +318,7 @@ int main(){
 	test2();//at & [] & front & back
 	test3();//iterator operation
 	test4();//const_iterator operation
-	test5();//erase & insert 
+	test5();//erase & insert
 	test6();//clear & copy & assignment
 	test7();//complexity
 }

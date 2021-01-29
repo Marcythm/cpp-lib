@@ -16,8 +16,8 @@ Yours Sincerely. Rabbit.
 long long randNum(long long x,long long maxNum)
 {
 	x = (x * 10007) % maxNum;
-	return x + 1; 
-} 
+	return x + 1;
+}
 const size_t N = 10005LL;
 
 void error()
@@ -66,7 +66,7 @@ void TestBint()
 		vBint.push_back(Util::Bint(i) * randNum(i, (1 << 25) ));
 		dBint.push_back(vBint.back());
 	}
-	
+
 	for (int i = 0; i < N; ++i) {
 		if (!(vBint[i] == dBint[i]))
 			error();
@@ -193,9 +193,9 @@ void TestPopAndPush()
 		if (!(drInt[1006LL - i] == rInt[i]))
 			error();
 	}
-	
+
 	std::cout << "Correct." << std::endl;
-	
+
 }
 
 int main()
