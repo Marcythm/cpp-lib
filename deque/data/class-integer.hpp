@@ -4,8 +4,8 @@ private:
 public:
 	Integer(const int &value) : data(value) {}
 	Integer(const Integer &other) : data(other.data) {}
-	bool operator==(const Integer &t)
+	friend bool operator==(const Integer &s, const Integer &t)
 	{
-		return data == t.data;
+		return s.data == t.data;
 	}
 };

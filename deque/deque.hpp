@@ -37,6 +37,7 @@ public:
 
 	auto operator = (Self &&) -> Self&;
 	auto operator = (const Self &) -> Self&;
+
 	/**
 	 * access specified element with bounds checking
 	 * throw index_out_of_bound if out of bound.
@@ -90,12 +91,12 @@ public:
 	/**
 	 * inserts an element to the beginning.
 	 */
-	auto push_front(const value_type &value) -> void { __data->insert(0, value); }
+	auto push_front(const value_type &value) -> void { __data->insert(0, value); ++__size; }
 
 	/**
 	 * adds an element to the end
 	 */
-	auto push_back(const value_type &value) -> void { __data->insert(size(), value); }
+	auto push_back(const value_type &value) -> void { __data->insert(size(), value); ++__size; }
 
 	/**
 	 * removes the first element.
@@ -166,6 +167,8 @@ public:
 	deque<T>::Block::Block()
 		: prev(nullptr), succ(nullptr),
 			__data(static_cast<pointer>(std::malloc(sizeof(value_type) * BLOCK_SIZE))),
+			// __data(reinterpret_cast<pointer>(new unsigned char[BLOCK_SIZE * sizeof(value_type)])),
+			// __data(new value_type[BLOCK_SIZE]),
 				__beg(__data + HALF_BLOCK_SIZE), __end(__beg) {}
 
 	template <typename T>
@@ -180,13 +183,24 @@ public:
 
 	template <typename T>
 	deque<T>::Block::Block(const Self &other)
-		: Block(other.data(), other.size()) { }
+		: prev(nullptr), succ(nullptr),
+			__data(other.__data != nullptr ? static_cast<pointer>(std::malloc(sizeof(value_type) * BLOCK_SIZE)) : nullptr),
+			// __data(other.__data != nullptr ? reinterpret_cast<pointer>(new unsigned char[BLOCK_SIZE * sizeof(value_type)]) : nullptr),
+			// __data(other.__data != nullptr ? new value_type[BLOCK_SIZE] : nullptr),
+				__beg(other.__data != nullptr ? __data + HALF_BLOCK_SIZE : nullptr), __end(__beg) {
+					if (other.__data != nullptr) {
+						__beg = __end = __data + HALF_BLOCK_SIZE - other.size() / 2;
+						append_unchecked(other.data(), other.size());
+					}
+				}
 
 	template <typename T>
 	deque<T>::Block::~Block() {
 		for (; __end != __beg; )
 			(--__end)->~value_type();
-		free(__data);
+		std::free(__data);
+		// delete[] reinterpret_cast<unsigned char*>(__data);
+		// delete[] __data;
 	}
 
 
@@ -202,8 +216,9 @@ public:
 		if (target == nullptr)
 #ifdef DEBUG
 			throw "call Block::link() with a null pointer: this will cause original successor lost!";
-#endif
+#else
 			return nullptr;
+#endif
 		Self *u = succ; succ = target; target->succ = u;
 		target->prev = this; if (u != nullptr) u->prev = target;
 		return target;
@@ -214,8 +229,9 @@ public:
 		if (succ == nullptr)
 #ifdef DEBUG
 			throw "call Block::cut() on a block without succ block: this will cut nothing";
-#endif
+#else
 			return nullptr;
+#endif
 		Self *target = succ, *u = target->succ;
 		succ = u; if (u != nullptr) u->prev = this;
 		target->prev = target->succ = nullptr;
@@ -244,8 +260,9 @@ public:
 		if (__dst < __data or __data + BLOCK_SIZE <= __dst)
 #ifdef DEBUG
 			throw "call Block::move_data_in_block(): __dst not in block";
-#endif
+#else
 			return;
+#endif
 		if (__beg < __dst) {
 			auto o_beg = __beg, o_end = __end;
 			__beg = __end = __dst + size();
@@ -265,8 +282,9 @@ public:
 		if (__size > BLOCK_SIZE)
 #ifdef DEBUG
 			throw "call Block::reserve(): reserve size too large";
-#endif
+#else
 			return;
+#endif
 		move_data_in_block(__data + HALF_BLOCK_SIZE - __size / 2);
 	}
 
@@ -288,8 +306,9 @@ public:
 		if (succ == nullptr)
 #ifdef DEBUG
 			throw "call Block::merge() on a block without succ block";
-#endif
+#else
 			return this;
+#endif
 		Block *target = cut();
 		append(target->data(), target->size());
 		delete target;
@@ -301,8 +320,9 @@ public:
 		if (pos > size())
 #ifdef DEBUG
 			throw "call Block::split() with argument pos too big";
-#endif
+#else
 			return this;
+#endif
 		link(new Block(__beg + pos, size() - pos));
 		__end = __beg + pos;
 		return succ;
@@ -326,8 +346,9 @@ public:
 		if (size() == 0)
 #ifdef DEBUG
 			throw "call Block::pop_front() on an empty block";
-#endif
+#else
 			return;
+#endif
 		(__beg++)->~value_type();
 		adjust();
 	}
@@ -337,8 +358,9 @@ public:
 		if (size() == 0)
 #ifdef DEBUG
 			throw "call Block::pop_back() on an empty block";
-#endif
+#else
 			return;
+#endif
 		(--__end)->~value_type();
 		adjust();
 	}
@@ -350,12 +372,17 @@ public:
 			if (succ == nullptr)
 #ifdef DEBUG
 				throw "in Block::insert(): argument pos too big";
-#endif
+#else
 				return;
+#endif
 			return succ->insert(pos - size(), value);
 		}
-		if (prev == nullptr and pos == 0)
-			return link(new Block)->insert(0, value);
+		if (prev == nullptr and pos == 0) {
+			Self *u = new Block;
+			if (u == nullptr) puts("\033[1mGGGGGG\033[0m");
+			link(u);
+			return u->insert(0, value);
+		}
 
 		if (pos * 2 < size()) {
 			for (auto p = __beg; p != __beg + pos; ++p)
@@ -377,8 +404,9 @@ public:
 			if (succ == nullptr)
 #ifdef DEBUG
 				throw "in Block::erase(): argument pos too big";
-#endif
+#else
 				return;
+#endif
 			return succ->erase(pos - size());
 		}
 
@@ -401,8 +429,9 @@ public:
 			if (succ == nullptr)
 #ifdef DEBUG
 				throw "in Block::at(): argument pos too big";
-#endif
+#else
 				return __beg[size() - 1];
+#endif
 			return succ->at(pos - size());
 		}
 		return __beg[pos];
@@ -414,8 +443,9 @@ public:
 			if (succ == nullptr)
 #ifdef DEBUG
 				throw "in Block::at(): argument pos too big";
-#endif
+#else
 				return __beg[size() - 1];
+#endif
 			return succ->at(pos - size());
 		}
 		return __beg[pos];
@@ -468,7 +498,7 @@ public:
 		auto operator -- () -> Self& { return --pos, *this; }
 
 		auto operator * () const -> reference;
-		auto operator -> () const noexcept -> pointer;
+		auto operator -> () const -> pointer;
 
 		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
 		auto operator == (const const_iterator &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
@@ -487,7 +517,7 @@ public:
 	}
 
 	template <typename T>
-	auto deque<T>::iterator::operator -> () const noexcept -> pointer {
+	auto deque<T>::iterator::operator -> () const -> pointer {
 		if (par == nullptr or pos >= par->size())
 			throw invalid_iterator();
 		return std::addressof(par->__data->at(pos));
@@ -504,9 +534,9 @@ public:
 		using Self	= const_iterator;
 
 		size_type pos;
-		Up *par;
+		const Up *par;
 
-		const_iterator(size_type __pos, Up *__par)
+		const_iterator(size_type __pos, const Up *__par)
 			: pos(__pos), par(__par) {}
 
 	public:
@@ -541,7 +571,7 @@ public:
 		auto operator -- () -> Self& { return --pos, *this; }
 
 		auto operator * () const -> const_reference;
-		auto operator -> () const noexcept -> const_pointer;
+		auto operator -> () const -> const_pointer;
 
 		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
 		auto operator == (const iterator &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
@@ -560,7 +590,7 @@ public:
 	}
 
 	template <typename T>
-	auto deque<T>::const_iterator::operator -> () const noexcept -> const_pointer {
+	auto deque<T>::const_iterator::operator -> () const -> const_pointer {
 		if (par == nullptr or pos >= par->size())
 			throw invalid_iterator();
 		return std::addressof(par->__data->at(pos));
@@ -591,16 +621,16 @@ public:
 	template <typename T>
 	auto deque<T>::operator = (Self &&rhs) -> Self& {
 		if (this == std::addressof(rhs)) return *this;
-		clear();
+		clear(); __size = rhs.__size;
 		__data->succ = rhs.__data->succ;
 		rhs.__data->succ = nullptr;
 		return *this;
 	}
 
 	template <typename T>
-	auto deque<T>::operator=(const Self &rhs) -> Self& {
+	auto deque<T>::operator = (const Self &rhs) -> Self& {
 		if (this == std::addressof(rhs)) return *this;
-		clear();
+		clear(); __size = rhs.__size;
 		if (rhs.size() != 0) __data->succ = rhs.__data->succ->clone();
 		return *this;
 	}
@@ -608,10 +638,14 @@ public:
 
 	template <typename T>
 	auto deque<T>::at(const size_type &pos) -> reference {
+		if (pos >= size()) throw index_out_of_bound();
+#ifdef DEBUG_INFO
+		printf("at(): pos = %lu, size() = %lu\n", pos, size());
+#endif
 		try {
 			return __data->at(pos);
 		} catch (const char *msg) {
-			puts("exception caught!");
+			puts("\nexception caught!");
 			puts(msg);
 			throw index_out_of_bound{};
 		}
@@ -619,10 +653,14 @@ public:
 
 	template <typename T>
 	auto deque<T>::at(const size_type &pos) const -> const_reference {
+		if (pos >= size()) throw index_out_of_bound();
+#ifdef DEBUG_INFO
+		printf("at(): pos = %lu, size() = %lu\n", pos, size());
+#endif
 		try {
 			return __data->at(pos);
 		} catch (const char *msg) {
-			puts("exception caught!");
+			puts("\nexception caught!");
 			puts(msg);
 			throw index_out_of_bound{};
 		}
@@ -631,25 +669,25 @@ public:
 
 	template <typename T>
 	auto deque<T>::front() -> reference {
-		if (size() == 0) throw container_is_empty{};
+		if (size() == 0) throw container_is_empty();
 		return at(0);
 	}
 
 	template <typename T>
 	auto deque<T>::front() const -> const_reference {
-		if (size() == 0) throw container_is_empty{};
+		if (size() == 0) throw container_is_empty();
 		return at(0);
 	}
 
 	template <typename T>
 	auto deque<T>::back() -> reference {
-		if (size() == 0) throw container_is_empty{};
+		if (size() == 0) throw container_is_empty();
 		return at(size() - 1);
 	}
 
 	template <typename T>
 	auto deque<T>::back() const -> const_reference {
-		if (size() == 0) throw container_is_empty{};
+		if (size() == 0) throw container_is_empty();
 		return at(size() - 1);
 	}
 
@@ -658,13 +696,14 @@ public:
 	auto deque<T>::clear() -> void {
 		for (; __data->succ != nullptr; )
 			delete __data->cut();
+		__size = 0;
 	}
 
 	template <typename T>
 	auto deque<T>::insert(iterator pos, const value_type &value) -> iterator {
 		if (pos.par != this or pos.pos > size())
 			throw invalid_iterator();
-		__data->insert(pos.pos, value);
+		__data->insert(pos.pos, value); ++__size;
 		return pos;
 	}
 
@@ -673,20 +712,20 @@ public:
 		if (empty()) throw container_is_empty();
 		if (pos.par != this or pos.pos >= size())
 			throw invalid_iterator();
-		__data->erase(pos.pos);
+		__data->erase(pos.pos); --__size;
 		return pos;
 	}
 
 	template <typename T>
 	auto deque<T>::pop_front() -> void {
 		if (size() == 0) throw container_is_empty();
-		__data->erase(0);
+		__data->erase(0); --__size;
 	}
 
 	template <typename T>
 	auto deque<T>::pop_back() -> void {
 		if (size() == 0) throw container_is_empty();
-		__data->erase(size() - 1);
+		__data->erase(size() - 1); --__size;
 	}
 
 /* } */
