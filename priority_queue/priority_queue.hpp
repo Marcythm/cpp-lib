@@ -23,9 +23,9 @@ private:
 		HeapNode *ls, *rs;
 		value_type value;
 
-		HeapNode(const HeapNode &rhs) = default;
-		HeapNode(HeapNode &&rhs): depth(rhs.depth), ls(rhs.ls), rs(rhs.rs), value(std::move(rhs.value)) {
-			rhs.ls = rhs.rs = nullptr;
+		HeapNode(const HeapNode &other) = default;
+		HeapNode(HeapNode &&other): depth(other.depth), ls(other.ls), rs(other.rs), value(std::move(other.value)) {
+			other.ls = other.rs = nullptr;
 		}
 
 		HeapNode(const value_type &_value = value_type())
@@ -68,7 +68,7 @@ private:
 public:
 	priority_queue(): __root(nullptr), __size(0), __comp(Compare()) {}
 	priority_queue(const Self &other)
-		: __root(clone(rhs.__root)), __size(rhs.__size), __comp(other.__comp) {}
+		: __root(clone(other.__root)), __size(other.__size), __comp(other.__comp) {}
 
 	~priority_queue() { remove(__root); }
 
@@ -87,7 +87,7 @@ public:
 	}
 
 	auto push(const value_type &value) -> void {
-		__root = merge(__root, new Node(value));
+		__root = merge(__root, new HeapNode(value));
 		++__size;
 	}
 
@@ -102,7 +102,7 @@ public:
 
 	auto size() const -> size_type { return __size; }
 
-	auto empty() const -> bool { return root == nullptr; }
+	auto empty() const -> bool { return __root == nullptr; }
 
 	auto merge(Self &other) -> void {
 		__root = merge(__root, other.__root);
