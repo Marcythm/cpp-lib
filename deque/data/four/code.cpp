@@ -433,7 +433,7 @@ std::pair<bool, double> iteratorRedENChecker() {
 	}
 	timer.init();
 	for (int i = 1; i <= N; i++) {
-		int pos = rand() % (a.size());	
+		int pos = rand() % (a.size());
 		if (*(a.end() -= i) != *(b.end() -= i)) {
 			return std::make_pair(false, 0);
 		}
@@ -684,7 +684,7 @@ std::pair<bool, double> errorIteratorChecker() {
 	} else {
 		return std::make_pair(false, 0);
 	}
-	
+
 }
 
 std::pair<bool, double> errorInsertChecker() {
@@ -1042,7 +1042,7 @@ std::pair<bool, double> synthesisChecker() {
 
 	auto citA = cA.cbegin();
 	auto citB = cB.cbegin();
-	for (; citA != cA.end(); citA++, citB) {
+	for (; citA != cA.end(); citA++, citB++) {
 		if (*citA != *citB) {
 			return std::make_pair(false, 0);
 		}

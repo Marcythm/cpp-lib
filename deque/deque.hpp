@@ -92,12 +92,12 @@ public:
 	/**
 	 * inserts an element to the beginning.
 	 */
-	auto push_front(const value_type &value) -> void { __data->insert(0, value); ++__size; }
+	auto push_front(const value_type &value) -> void { __data->succ->push_front(value); ++__size; }
 
 	/**
 	 * adds an element to the end
 	 */
-	auto push_back(const value_type &value) -> void { __data->insert(size(), value); ++__size; }
+	auto push_back(const value_type &value) -> void { __data->prev->push_back(value); ++__size; }
 
 	/**
 	 * removes the first element.
@@ -143,28 +143,32 @@ public:
 		auto size() const -> size_type { return __end - __beg; }
 		auto cap_back() const -> size_type { return __data + BLOCK_SIZE - __end; }
 		auto clear() -> void { __beg = __end = __data + HALF_BLOCK_SIZE; }
-
-		auto link(Self *) -> Self*;
-		auto cut() -> Self*;
+		auto ishead() const -> bool { return __data == nullptr; }
+		auto empty() const -> bool { return __beg == __end; }
 
 		auto append_unchecked(pointer *, size_type, bool) -> void;
 		auto append(pointer *, size_type, bool) -> void;
 		auto move_data_in_block(pointer *) -> void;
 		auto reserve(size_type) -> void;
 
-		auto adjust() -> void;
-
+		auto link(Self *) -> Self*;
+		auto cut() -> Self*;
 		auto merge() -> Self*;
 		auto split(size_type) -> Self*;
+		auto adjust() -> void;
 
 		auto push_front(const value_type &value) -> void { *--__beg = new value_type(value); adjust(); }
 		auto push_back(const value_type &value) -> void { *__end++ = new value_type(value); adjust(); }
-
 		auto pop_front() -> void;
 		auto pop_back() -> void;
 
 		auto insert(size_type, const value_type &) -> void;
 		auto erase(size_type) -> void;
+
+		auto front() -> reference;
+		auto front() const -> const_reference;
+		auto back() -> reference;
+		auto back() const -> const_reference;
 
 		auto at(size_type) -> reference;
 		auto at(size_type) const -> const_reference;
@@ -174,13 +178,13 @@ public:
 
 	template <typename T>
 	deque<T>::Block::Block()
-		: prev(nullptr), succ(nullptr),
+		: prev(this), succ(this),
 			__data(new value_type*[BLOCK_SIZE]),
-				__beg(__data + HALF_BLOCK_SIZE), __end(__beg) {}
+				__beg(__data + HALF_BLOCK_SIZE), __end(__beg) { }
 
 	template <typename T>
 	deque<T>::Block::Block(noinit_tag)
-		: prev(nullptr), succ(nullptr), __data(nullptr), __beg(nullptr), __end(nullptr) {}
+		: prev(this), succ(this), __data(nullptr), __beg(nullptr), __end(nullptr) { }
 
 	template <typename T>
 	deque<T>::Block::Block(pointer *src, size_type n): Block() {
@@ -190,7 +194,7 @@ public:
 
 	template <typename T>
 	deque<T>::Block::Block(const Self &other)
-		: prev(nullptr), succ(nullptr),
+		: prev(this), succ(this),
 			__data(other.__data != nullptr ? new value_type*[BLOCK_SIZE] : nullptr),
 				__beg(nullptr), __end(nullptr) {
 					if (other.__data != nullptr) {
@@ -207,32 +211,12 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::clone() const -> Self* {
-		Self *target = new Block(*this);
-		if (succ != nullptr) {
-			target->succ = succ->clone();
-			target->succ->prev = target;
-		}
-		return target;
-	}
-
-
-	template <typename T>
-	auto deque<T>::Block::link(Self *target) -> Self* {
-		if (target == nullptr)
-			throw "call Block::link() with a null pointer: this will cause original successor lost!";
-		Self *u = succ; succ = target; target->succ = u;
-		target->prev = this; if (u != nullptr) u->prev = target;
-		return target;
-	}
-
-	template <typename T>
-	auto deque<T>::Block::cut() -> Self* {
-		if (succ == nullptr)
-			throw "call Block::cut() on a block without succ block: this will cut nothing";
-		Self *target = succ, *u = target->succ;
-		succ = u; if (u != nullptr) u->prev = this;
-		target->prev = target->succ = nullptr;
-		return target;
+		if (ishead()) {
+			Self *target = new Block(noinit_tag());
+			for (Self *p = succ; not (p->ishead()); p = p->succ)
+				target->prev->link(new Block(*p));
+			return target;
+		} else return new Block(*this);
 	}
 
 
@@ -278,24 +262,32 @@ public:
 		move_data_in_block(__data + HALF_BLOCK_SIZE - __size / 2);
 	}
 
+
 	template <typename T>
-	auto deque<T>::Block::adjust() -> void {
-		if (succ != nullptr and size() + succ->size() < CONTENT_LIMIT) {
-			reserve(size() + succ->size());
-			merge();
-		}
-		if (size() >= CONTENT_LIMIT * 2)
-			split(size() / 2);
-		if (__beg == __data or __end == __data + BLOCK_SIZE)
-			move_data_in_block(__data + HALF_BLOCK_SIZE - size() / 2);
+	auto deque<T>::Block::link(Self *target) -> Self* {
+		if (target == nullptr)
+			throw "call Block::link() with a null pointer: this will cause original successor lost!";
+		Self *s = this, *u = target, *v = target->prev, *t = succ;
+		s->succ = u; u->prev = s;
+		v->succ = t; t->prev = v;
+		return target;
 	}
 
+	template <typename T>
+	auto deque<T>::Block::cut() -> Self* {
+		if (succ->ishead() or (prev == this and succ == this))
+			throw "call Block::cut() on a block without succ block: this will cut itself";
+		Self *target = succ, *u = target->succ;
+		succ = u; u->prev = this;
+		target->prev = target->succ = target;
+		return target;
+	}
 
 	template <typename T>
 	auto deque<T>::Block::merge() -> Self* {
-		if (succ == nullptr)
+		if (succ->ishead())
 			throw "call Block::merge() on a block without succ block";
-		Block *target = cut();
+		Self *target = cut();
 		append(target->data(), target->size(), true);
 		target->clear();
 		delete target;
@@ -312,8 +304,27 @@ public:
 	}
 
 	template <typename T>
+	auto deque<T>::Block::adjust() -> void {
+		if (ishead()) return;
+		if (not (succ->ishead()) and size() + succ->size() < CONTENT_LIMIT) {
+			reserve(size() + succ->size());
+			merge();
+		}
+		if (size() >= CONTENT_LIMIT * 1.5)
+			split(size() / 2);
+		if (__beg == __data or __end == __data + BLOCK_SIZE)
+			move_data_in_block(__data + HALF_BLOCK_SIZE - size() / 2);
+		if (not (prev->ishead()) and prev->size() + size() < CONTENT_LIMIT) {
+			prev->reserve(prev->size() + size());
+			prev->merge();
+			return;
+		}
+		if (empty() and not (prev->ishead() and succ->ishead())) delete prev->cut();
+	}
+
+	template <typename T>
 	auto deque<T>::Block::pop_front() -> void {
-		if (size() == 0)
+		if (empty())
 			throw "call Block::pop_front() on an empty block";
 		delete *__beg++;
 		adjust();
@@ -321,7 +332,7 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::pop_back() -> void {
-		if (size() == 0)
+		if (empty())
 			throw "call Block::pop_back() on an empty block";
 		delete *--__end;
 		adjust();
@@ -331,12 +342,10 @@ public:
 	template <typename T>
 	auto deque<T>::Block::insert(size_type pos, const value_type &value) -> void {
 		if (pos > size()) {
-			if (succ == nullptr)
+			if (succ->ishead())
 				throw "in Block::insert(): argument pos too big";
 			return succ->insert(pos - size(), value);
 		}
-		if (prev == nullptr and pos == 0)
-			return link(new Block)->insert(0, value);
 
 		if (pos * 2 < size()) {
 			for (auto p = __beg; p != __beg + pos; ++p)
@@ -355,7 +364,7 @@ public:
 	template <typename T>
 	auto deque<T>::Block::erase(size_type pos) -> void {
 		if (pos >= size()) {
-			if (succ == nullptr)
+			if (succ->ishead())
 				throw "in Block::erase(): argument pos too big";
 			return succ->erase(pos - size());
 		}
@@ -375,9 +384,34 @@ public:
 	}
 
 	template <typename T>
+	auto deque<T>::Block::front() -> reference {
+		if (empty()) throw "call Block::front() on an empty block";
+		return *__beg[0];
+	}
+
+	template <typename T>
+	auto deque<T>::Block::front() const -> const_reference {
+		if (empty()) throw "call Block::front() on an empty block";
+		return *__beg[0];
+	}
+
+	template <typename T>
+	auto deque<T>::Block::back() -> reference {
+		if (empty()) throw "call Block::back() on an empty block";
+		return *__end[-1];
+	}
+
+	template <typename T>
+	auto deque<T>::Block::back() const -> const_reference {
+		if (empty()) throw "call Block::back() on an empty block";
+		return *__end[-1];
+	}
+
+
+	template <typename T>
 	auto deque<T>::Block::at(size_type pos) -> reference {
 		if (pos >= size()) {
-			if (succ == nullptr)
+			if (succ->ishead())
 				throw "in Block::at(): argument pos too big";
 			return succ->at(pos - size());
 		}
@@ -387,7 +421,7 @@ public:
 	template <typename T>
 	auto deque<T>::Block::at(size_type pos) const -> const_reference {
 		if (pos >= size()) {
-			if (succ == nullptr)
+			if (succ->ishead())
 				throw "in Block::at(): argument pos too big";
 			return succ->at(pos - size());
 		}
@@ -416,10 +450,10 @@ public:
 		Up *par;
 
 		iterator(size_type __pos, Up *__par)
-			: pos(__pos), par(__par) {}
+			: pos(__pos), par(__par) { }
 
 	public:
-		iterator(): pos(-1), par(nullptr) {}
+		iterator(): pos(-1), par(nullptr) { }
 		iterator(Self &&) = default;
 		iterator(const Self &) = default;
 
@@ -492,13 +526,13 @@ public:
 		const Up *par;
 
 		const_iterator(size_type __pos, const Up *__par)
-			: pos(__pos), par(__par) {}
+			: pos(__pos), par(__par) { }
 
 	public:
-		const_iterator(): pos(-1), par(nullptr) {}
+		const_iterator(): pos(-1), par(nullptr) { }
 		const_iterator(Self &&) = default;
 		const_iterator(const Self &) = default;
-		const_iterator(const iterator &other): pos(other.pos), par(other.par) {}
+		const_iterator(const iterator &other): pos(other.pos), par(other.par) { }
 
 		auto operator = (const Self &) -> Self& = default;
 
@@ -566,36 +600,37 @@ public:
 
 	template <typename T>
 	deque<T>::deque(): __size(0),
-		__data(new Block(typename Block::noinit_tag())) {}
+		__data(new Block(typename Block::noinit_tag())) {
+			__data->link(new Block);
+		}
 
 	template <typename T>
 	deque<T>::deque(Self &&other): __size(other.__size),
 		__data(new Block(typename Block::noinit_tag())) {
+			__data->prev = other.__data->prev;
 			__data->succ = other.__data->succ;
-			other.__data->succ = nullptr;
+			other.__data->prev = other.__data->succ = other.__data;
 		}
 
 	template <typename T>
-	deque<T>::deque(const Self &other): __size(other.__size),
-		__data(new Block(typename Block::noinit_tag())) {
-			if (other.size() != 0)
-				__data->succ = other.__data->succ->clone();
-		}
+	deque<T>::deque(const Self &other):
+		__size(other.__size), __data(other.__data->clone()) { }
 
 	template <typename T>
 	auto deque<T>::operator = (Self &&rhs) -> Self& {
 		if (this == std::addressof(rhs)) return *this;
-		clear(); __size = rhs.__size;
+		clear(); delete __data; __size = rhs.__size;
+		__data->prev = rhs.__data->prev;
 		__data->succ = rhs.__data->succ;
-		rhs.__data->succ = nullptr;
+		rhs.__data->prev = rhs.__data->succ = rhs.__data;
 		return *this;
 	}
 
 	template <typename T>
 	auto deque<T>::operator = (const Self &rhs) -> Self& {
 		if (this == std::addressof(rhs)) return *this;
-		clear(); __size = rhs.__size;
-		if (rhs.size() != 0) __data->succ = rhs.__data->succ->clone();
+		clear(); delete __data; __size = rhs.__size;
+		__data = rhs.__data->clone();
 		return *this;
 	}
 
@@ -603,71 +638,66 @@ public:
 	template <typename T>
 	auto deque<T>::at(const size_type &pos) -> reference {
 		if (pos >= size()) throw index_out_of_bound();
-#ifdef DEBUG_INFO
-		printf("at(): pos = %lu, size() = %lu\n", pos, size());
-#endif
 		try {
 			return __data->at(pos);
 		} catch (const char *msg) {
 			puts("\nexception caught!");
 			puts(msg);
-			throw index_out_of_bound{};
+			throw index_out_of_bound();
 		}
 	}
 
 	template <typename T>
 	auto deque<T>::at(const size_type &pos) const -> const_reference {
 		if (pos >= size()) throw index_out_of_bound();
-#ifdef DEBUG_INFO
-		printf("at(): pos = %lu, size() = %lu\n", pos, size());
-#endif
 		try {
 			return __data->at(pos);
 		} catch (const char *msg) {
 			puts("\nexception caught!");
 			puts(msg);
-			throw index_out_of_bound{};
+			throw index_out_of_bound();
 		}
 	}
 
 
 	template <typename T>
 	auto deque<T>::front() -> reference {
-		if (size() == 0) throw container_is_empty();
-		return at(0);
+		if (empty()) throw container_is_empty();
+		return __data->succ->front();
 	}
 
 	template <typename T>
 	auto deque<T>::front() const -> const_reference {
-		if (size() == 0) throw container_is_empty();
-		return at(0);
+		if (empty()) throw container_is_empty();
+		return __data->succ->front();
 	}
 
 	template <typename T>
 	auto deque<T>::back() -> reference {
-		if (size() == 0) throw container_is_empty();
-		return at(size() - 1);
+		if (empty()) throw container_is_empty();
+		return __data->prev->back();
 	}
 
 	template <typename T>
 	auto deque<T>::back() const -> const_reference {
-		if (size() == 0) throw container_is_empty();
-		return at(size() - 1);
+		if (empty()) throw container_is_empty();
+		return __data->prev->back();
 	}
 
 
 	template <typename T>
 	auto deque<T>::clear() -> void {
-		for (; __data->succ != nullptr; )
+		for (; __data->succ != __data; )
 			delete __data->cut();
 		__size = 0;
+		__data->link(new Block);
 	}
 
 	template <typename T>
 	auto deque<T>::insert(iterator pos, const value_type &value) -> iterator {
 		if (pos.par != this or pos.pos > size())
 			throw invalid_iterator();
-		__data->insert(pos.pos, value); ++__size;
+		__data->succ->insert(pos.pos, value); ++__size;
 		return pos;
 	}
 
@@ -676,20 +706,20 @@ public:
 		if (empty()) throw container_is_empty();
 		if (pos.par != this or pos.pos >= size())
 			throw invalid_iterator();
-		__data->erase(pos.pos); --__size;
+		__data->succ->erase(pos.pos); --__size;
 		return pos;
 	}
 
 	template <typename T>
 	auto deque<T>::pop_front() -> void {
-		if (size() == 0) throw container_is_empty();
-		__data->erase(0); --__size;
+		if (empty()) throw container_is_empty();
+		__data->succ->pop_front(); --__size;
 	}
 
 	template <typename T>
 	auto deque<T>::pop_back() -> void {
-		if (size() == 0) throw container_is_empty();
-		__data->erase(size() - 1); --__size;
+		if (empty()) throw container_is_empty();
+		__data->prev->pop_back(); --__size;
 	}
 
 /* } */
