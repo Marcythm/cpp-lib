@@ -10,14 +10,14 @@ namespace sjtu {
 
 template <typename T, class Compare = std::less<T>>
 class priority_queue {
+	using Self = priority_queue<T, Compare>;
 public:
-	using value_type		=	T;
-	using reference			=	value_type&;
-	using const_reference	=	const value_type&;
-	using size_type			=	size_t;
+	using value_type		= T;
+	using reference			= value_type&;
+	using const_reference	= const value_type&;
+	using size_type			= size_t;
 
 private:
-
 	struct HeapNode {
 		size_type depth;
 		HeapNode *ls, *rs;
@@ -33,7 +33,7 @@ private:
 		HeapNode(size_type _depth, HeapNode *_ls, HeapNode *_rs, const value_type &_value)
 			: depth(_depth), ls(_ls), rs(_rs), value(_value) { self_adjust(); }
 
-		void self_adjust() {
+		auto self_adjust() -> void {
 			if (ls == nullptr or (rs != nullptr and ls->depth < rs->depth))
 				std::swap(ls, rs);
 			depth = (rs != nullptr ? rs->depth + 1 : 0);
@@ -42,17 +42,17 @@ private:
 		~HeapNode() = default;
 	};
 
-	HeapNode* clone(HeapNode *u) {
+	auto clone(HeapNode *u) -> HeapNode* {
 		return u != nullptr ? new HeapNode(u->depth, clone(u->ls), clone(u->rs), u->value) : nullptr;
 	}
-	void remove(HeapNode *u) {
+	auto remove(HeapNode *u) -> void {
 		if (u != nullptr) {
 			remove(u->ls);
 			remove(u->rs);
 			delete u;
 		}
 	}
-	HeapNode* merge(HeapNode *lhs, HeapNode *rhs) {
+	auto merge(HeapNode *lhs, HeapNode *rhs) -> HeapNode* {
 		if (lhs == nullptr) return rhs;
 		if (rhs == nullptr) return lhs;
 		if (__comp(lhs->value, rhs->value)) std::swap(lhs, rhs);
@@ -67,31 +67,31 @@ private:
 
 public:
 	priority_queue(): __root(nullptr), __size(0), __comp(Compare()) {}
-	priority_queue(const priority_queue &other)
+	priority_queue(const Self &other)
 		: __root(clone(rhs.__root)), __size(rhs.__size), __comp(other.__comp) {}
 
 	~priority_queue() { remove(__root); }
 
-	priority_queue &operator=(const priority_queue &other) {
-		if (this == &other) return *this;
+	auto operator=(const Self &other) -> Self& {
+		if (this == std::addressof(other)) return *this;
 		remove(__root);
 		__root = clone(other.__root);
 		__size = other.__size;
 		return *this;
 	}
 
-	const_reference top() const {
+	auto top() const -> const_reference {
 		if (__root == nullptr)
 			throw container_is_empty();
 		return __root->value;
 	}
 
-	void push(const value_type &value) {
+	auto push(const value_type &value) -> void {
 		__root = merge(__root, new Node(value));
 		++__size;
 	}
 
-	void pop() {
+	auto pop() -> void {
 		if (__root == nullptr)
 			throw container_is_empty();
 		auto tmp = __root;
@@ -100,11 +100,11 @@ public:
 		--__size;
 	}
 
-	size_type size() const { return __size; }
+	auto size() const -> size_type { return __size; }
 
-	bool empty() const { return root == nullptr; }
+	auto empty() const -> bool { return root == nullptr; }
 
-	void merge(priority_queue &other) {
+	auto merge(Self &other) -> void {
 		__root = merge(__root, other.__root);
 		__size += other.__size;
 		other.__root = nullptr;
