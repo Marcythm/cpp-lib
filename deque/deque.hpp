@@ -56,6 +56,9 @@ public:
 	using size_type			= size_t;
 	using difference_type	= std::ptrdiff_t;
 
+	class iterator;
+	class const_iterator;
+
 private:
 	struct Block;
 
@@ -63,9 +66,6 @@ private:
 	Block *__data;
 
 public:
-	class iterator;
-	class const_iterator;
-
 	deque();
 	deque(Self &&);
 	deque(const Self &);
@@ -75,76 +75,34 @@ public:
 	auto operator = (Self &&) -> Self&;
 	auto operator = (const Self &) -> Self&;
 
-	/**
-	 * access specified element with bounds checking
-	 * throw index_out_of_bound if out of bound.
-	 */
+	auto empty() const -> bool { return __size == 0; }
+	auto size() const -> size_type { return __size; }
+	auto clear() -> void;
+
 	auto at(const size_type &) -> reference;
 	auto at(const size_type &) const -> const_reference;
 	auto operator[](const size_t &loc) -> reference { return at(loc); }
 	auto operator[](const size_t &loc) const -> const_reference { return at(loc); }
 
-	/**
-	 * access the first element
-	 * throw container_is_empty when the container is empty.
-	 */
 	auto front() -> reference;
 	auto front() const -> const_reference;
-
-	/**
-	 * access the last element
-	 * throw container_is_empty when the container is empty.
-	 */
 	auto back() -> reference;
 	auto back() const -> const_reference;
 
 	auto begin() -> iterator { return iterator(0, {__data->succ, __data->succ->begin()}, this); }
+	auto begin() const -> iterator { return iterator(0, {__data->succ, __data->succ->begin()}, this); }
 	auto cbegin() const -> const_iterator { return const_iterator(0, {__data->succ, __data->succ->cbegin()}, this); }
 
 	auto end() -> iterator { return iterator(size(), {__data->prev, __data->prev->end()}, this); }
+	auto end() const -> iterator { return iterator(size(), {__data->prev, __data->prev->end()}, this); }
 	auto cend() const -> const_iterator { return const_iterator(size(), {__data->prev, __data->prev->cend()}, this); }
 
-	auto empty() const -> bool { return __size == 0; }
-	auto size() const -> size_type { return __size; }
-
-	auto clear() -> void;
-
-	/**
-	 * inserts elements at the specified locat on in the container.
-	 * inserts value before loc
-	 * returns an iterator pointing to the inserted value
-	 *     throw if the iterator is invalid or it point to a wrong place.
-	 */
 	auto insert(iterator, const value_type &) -> iterator;
-
-	/**
-	 * removes specified element at loc.
-	 * removes the element at loc.
-	 * returns an iterator pointing to the following element, if loc pointing to the last element, end() will be returned.
-	 * throw if the container is empty, the iterator is invalid or it points to a wrong place.
-	 */
 	auto erase(iterator loc) -> iterator;
 
-	/**
-	 * inserts an element to the beginning.
-	 */
 	auto push_front(const value_type &value) -> void { __data->succ->push_front(value); ++__size; }
-
-	/**
-	 * adds an element to the end
-	 */
 	auto push_back(const value_type &value) -> void { __data->prev->push_back(value); ++__size; }
-
-	/**
-	 * removes the first element.
-	 *     throw when the container is empty.
-	 */
 	auto pop_front() -> void;
-
-	/**
-	 * removes the last element
-	 *     throw when the container is empty.
-	 */
 	auto pop_back() -> void;
 };
 
@@ -820,6 +778,14 @@ public:
 		return *this;
 	}
 
+	template <typename T>
+	auto deque<T>::clear() -> void {
+		for (; __data->succ != __data; )
+			delete __data->cut();
+		__size = 0;
+		__data->link(new Block);
+	}
+
 
 	template <typename T>
 	auto deque<T>::at(const size_type &loc) -> reference {
@@ -878,14 +844,6 @@ public:
 		return __data->prev->back();
 	}
 
-
-	template <typename T>
-	auto deque<T>::clear() -> void {
-		for (; __data->succ != __data; )
-			delete __data->cut();
-		__size = 0;
-		__data->link(new Block);
-	}
 
 	template <typename T>
 	auto deque<T>::insert(iterator it, const value_type &value) -> iterator {
