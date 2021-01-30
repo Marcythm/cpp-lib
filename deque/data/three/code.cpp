@@ -1510,7 +1510,7 @@ int main() {
 	puts("");
 #ifdef __CORRECT_TEST
 	puts("---------------------------------------------------------------------------");
-	try{
+	// try{
 		puts("Test Zone A: Correctness Testing...");
 		int n = sizeof(TEST_A) / sizeof(CheckerPair);
 		for (int i = 0; i < n; i++) {
@@ -1522,9 +1522,9 @@ int main() {
 				puts("FAILED");
 			}
 		}
-	} catch(...) {
-		puts("Unknown Error Occured");
-	}
+	// } catch(...) {
+		// puts("Unknown Error Occured");
+	// }
 	puts("---------------------------------------------------------------------------");
 #ifdef __SPEED_TEST
 	puts("");
@@ -1563,3 +1563,4 @@ int main() {
 #endif
     return 0;
 }
+//

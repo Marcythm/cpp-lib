@@ -7,6 +7,43 @@
 
 namespace sjtu {
 
+#define STLite_NOEXCEPT
+
+template <typename T1, typename T2>
+class pair {
+	using Self = pair;
+public:
+	using first_type	= T1;
+	using second_type	= T2;
+
+	T1 first;
+	T2 second;
+
+	constexpr pair(): first(), second() { }
+	constexpr pair(const T1 &x, const T2 &y): first(x), second(y) { }
+	template <typename U1, typename U2>
+		constexpr pair(const U1 &x, const U2 &y)
+			: first(x), second(y) { }
+	// template <typename U1, typename U2>
+	// 	constexpr pair(U1 &&x, U2 &&y)
+	// 		: first(std::move(x)), second(std::move(y)) { }
+
+	template <typename U1, typename U2>
+		constexpr pair(const pair<U1, U2> &other)
+			: first(other.first), second(other.second) { }
+	// template <typename U1, typename U2>
+	// 	constexpr pair(pair<U1, U2> &&other)
+	// 		: first(std::move(other.first)), second(std::move(other.second)) { }
+
+	template <typename U1, typename U2>
+		constexpr auto operator = (const pair<U1, U2> &other) -> Self&
+			{ first = other.first; second = other.second; return *this; }
+	// template <typename U1, typename U2>
+	// 	constexpr auto operator = (pair<U1, U2> &&other) -> Self&
+	// 		{ first = std::move(other.first), second = std::move(other.second); return *this; }
+};
+
+
 template <typename T>
 class deque {
 	using Self = deque;
@@ -20,7 +57,6 @@ public:
 	using difference_type	= int;
 
 private:
-	// struct Wrap;
 	struct Block;
 
 	size_type __size;
@@ -45,8 +81,8 @@ public:
 	 */
 	auto at(const size_type &) -> reference;
 	auto at(const size_type &) const -> const_reference;
-	auto operator[](const size_t &pos) -> reference { return at(pos); }
-	auto operator[](const size_t &pos) const -> const_reference { return at(pos); }
+	auto operator[](const size_t &loc) -> reference { return at(loc); }
+	auto operator[](const size_t &loc) const -> const_reference { return at(loc); }
 
 	/**
 	 * access the first element
@@ -62,11 +98,11 @@ public:
 	auto back() -> reference;
 	auto back() const -> const_reference;
 
-	auto begin() -> iterator { return iterator(0, this); }
-	auto cbegin() const -> const_iterator { return const_iterator(0, this); }
+	auto begin() -> iterator { return iterator(0, {__data->succ, __data->succ->begin()}, this); }
+	auto cbegin() const -> const_iterator { return const_iterator(0, {__data->succ, __data->succ->cbegin()}, this); }
 
-	auto end() -> iterator { return iterator(size(), this); }
-	auto cend() const -> const_iterator { return const_iterator(size(), this); }
+	auto end() -> iterator { return iterator(size(), {__data->prev, __data->prev->end()}, this); }
+	auto cend() const -> const_iterator { return const_iterator(size(), {__data->prev, __data->prev->cend()}, this); }
 
 	auto empty() const -> bool { return __size == 0; }
 	auto size() const -> size_type { return __size; }
@@ -75,19 +111,19 @@ public:
 
 	/**
 	 * inserts elements at the specified locat on in the container.
-	 * inserts value before pos
+	 * inserts value before loc
 	 * returns an iterator pointing to the inserted value
 	 *     throw if the iterator is invalid or it point to a wrong place.
 	 */
 	auto insert(iterator, const value_type &) -> iterator;
 
 	/**
-	 * removes specified element at pos.
-	 * removes the element at pos.
-	 * returns an iterator pointing to the following element, if pos pointing to the last element, end() will be returned.
+	 * removes specified element at loc.
+	 * removes the element at loc.
+	 * returns an iterator pointing to the following element, if loc pointing to the last element, end() will be returned.
 	 * throw if the container is empty, the iterator is invalid or it points to a wrong place.
 	 */
-	auto erase(iterator pos) -> iterator;
+	auto erase(iterator loc) -> iterator;
 
 	/**
 	 * inserts an element to the beginning.
@@ -141,10 +177,15 @@ public:
 		auto clone() const -> Self*;
 		auto data() const -> pointer* { return __beg; }
 		auto size() const -> size_type { return __end - __beg; }
-		auto cap_back() const -> size_type { return __data + BLOCK_SIZE - __end; }
 		auto clear() -> void { __beg = __end = __data + HALF_BLOCK_SIZE; }
-		auto ishead() const -> bool { return __data == nullptr; }
 		auto empty() const -> bool { return __beg == __end; }
+		auto cap_back() const -> size_type { return __data + BLOCK_SIZE - __end; }
+		auto ishead() const -> bool { return __data == nullptr; }
+
+		auto begin() -> pointer* { return __beg; }
+		auto cbegin() const -> const pointer* { return __beg; }
+		auto end() -> pointer* { return __end; }
+		auto cend() const -> const pointer* { return __end; }
 
 		auto append_unchecked(pointer *, size_type, bool) -> void;
 		auto append(pointer *, size_type, bool) -> void;
@@ -172,6 +213,10 @@ public:
 
 		auto at(size_type) -> reference;
 		auto at(size_type) const -> const_reference;
+
+		/* special version for iterator */
+		auto at_spec(size_type) -> pair<Self*, pointer*>;
+		auto at_spec(size_type) const -> pair<const Self*, const pointer*>;
 	};
 
 /* impl deque<T>::Block { */
@@ -239,8 +284,10 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::move_data_in_block(pointer *__dst) -> void {
+#ifndef STLite_NOEXCEPT
 		if (__dst < __data or __data + BLOCK_SIZE <= __dst)
 			throw "call Block::move_data_in_block(): __dst not in block";
+#endif
 		if (__beg < __dst) {
 			auto o_beg = __beg, o_end = __end;
 			__beg = __end = __dst + size();
@@ -257,16 +304,20 @@ public:
 	template <typename T>
 	auto deque<T>::Block::reserve(size_type __size) -> void {
 		if (__size <= size()) return;
+#ifndef STLite_NOEXCEPT
 		if (__size > BLOCK_SIZE)
 			throw "call Block::reserve(): reserve size too large";
+#endif
 		move_data_in_block(__data + HALF_BLOCK_SIZE - __size / 2);
 	}
 
 
 	template <typename T>
 	auto deque<T>::Block::link(Self *target) -> Self* {
+#ifndef STLite_NOEXCEPT
 		if (target == nullptr)
 			throw "call Block::link() with a null pointer: this will cause original successor lost!";
+#endif
 		Self *s = this, *u = target, *v = target->prev, *t = succ;
 		s->succ = u; u->prev = s;
 		v->succ = t; t->prev = v;
@@ -275,8 +326,10 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::cut() -> Self* {
+#ifndef STLite_NOEXCEPT
 		if (succ->ishead() or (prev == this and succ == this))
 			throw "call Block::cut() on a block without succ block: this will cut itself";
+#endif
 		Self *target = succ, *u = target->succ;
 		succ = u; u->prev = this;
 		target->prev = target->succ = target;
@@ -285,8 +338,10 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::merge() -> Self* {
+#ifndef STLite_NOEXCEPT
 		if (succ->ishead())
 			throw "call Block::merge() on a block without succ block";
+#endif
 		Self *target = cut();
 		append(target->data(), target->size(), true);
 		target->clear();
@@ -295,11 +350,13 @@ public:
 	}
 
 	template <typename T>
-	auto deque<T>::Block::split(size_type pos) -> Self* {
-		if (pos > size())
-			throw "call Block::split() with argument pos too big";
-		link(new Block(__beg + pos, size() - pos));
-		__end = __beg + pos;
+	auto deque<T>::Block::split(size_type loc) -> Self* {
+#ifndef STLite_NOEXCEPT
+		if (loc > size())
+			throw "call Block::split() with argument loc too big";
+#endif
+		link(new Block(__beg + loc, size() - loc));
+		__end = __beg + loc;
 		return succ;
 	}
 
@@ -324,59 +381,67 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::pop_front() -> void {
+#ifndef STLite_NOEXCEPT
 		if (empty())
 			throw "call Block::pop_front() on an empty block";
+#endif
 		delete *__beg++;
 		adjust();
 	}
 
 	template <typename T>
 	auto deque<T>::Block::pop_back() -> void {
+#ifndef STLite_NOEXCEPT
 		if (empty())
 			throw "call Block::pop_back() on an empty block";
+#endif
 		delete *--__end;
 		adjust();
 	}
 
 
 	template <typename T>
-	auto deque<T>::Block::insert(size_type pos, const value_type &value) -> void {
-		if (pos > size()) {
+	auto deque<T>::Block::insert(size_type loc, const value_type &value) -> void {
+		if (loc > size()) {
+#ifndef STLite_NOEXCEPT
 			if (succ->ishead())
-				throw "in Block::insert(): argument pos too big";
-			return succ->insert(pos - size(), value);
+				throw "in Block::insert(): argument loc too big";
+#endif
+			return succ->insert(loc - size(), value);
 		}
 
-		if (pos * 2 < size()) {
-			for (auto p = __beg; p != __beg + pos; ++p)
+		if (loc * 2 < size()) {
+			for (auto p = __beg; p != __beg + loc; ++p)
 				*(p - 1) = *p;
 			--__beg;
 		} else {
-			for (auto p = __end; p != __beg + pos; --p)
+			for (auto p = __end; p != __beg + loc; --p)
 				*p = *(p - 1);
 			__end++;
 		}
-		__beg[pos] = new value_type(value);
+		__beg[loc] = new value_type(value);
 
 		adjust();
 	}
 
 	template <typename T>
-	auto deque<T>::Block::erase(size_type pos) -> void {
-		if (pos >= size()) {
+	auto deque<T>::Block::erase(size_type loc) -> void {
+		if (loc >= size()) {
+#ifndef STLite_NOEXCEPT
 			if (succ->ishead())
-				throw "in Block::erase(): argument pos too big";
-			return succ->erase(pos - size());
+				throw "in Block::erase(): argument loc too big";
+#endif
+			return succ->erase(loc - size());
 		}
 
-		delete __beg[pos];
-		if (pos * 2 < size()) {
-			for (auto p = __beg + pos; p != __beg; --p)
+		delete __beg[loc];
+		if (loc * 2 < size()) {
+			for (auto p = __beg + loc; p != __beg; --p)
 				*p = *(p - 1);
 			__beg++;
 		} else {
 			--__end;
-			for (auto p = __beg + pos; p != __end; ++p)
+			for (auto p = __beg + loc; p != __end; ++p)
 				*p = *(p + 1);
 		}
 
@@ -385,47 +450,84 @@ public:
 
 	template <typename T>
 	auto deque<T>::Block::front() -> reference {
+#ifndef STLite_NOEXCEPT
 		if (empty()) throw "call Block::front() on an empty block";
+#endif
 		return *__beg[0];
 	}
 
 	template <typename T>
 	auto deque<T>::Block::front() const -> const_reference {
+#ifndef STLite_NOEXCEPT
 		if (empty()) throw "call Block::front() on an empty block";
+#endif
 		return *__beg[0];
 	}
 
 	template <typename T>
 	auto deque<T>::Block::back() -> reference {
+#ifndef STLite_NOEXCEPT
 		if (empty()) throw "call Block::back() on an empty block";
+#endif
 		return *__end[-1];
 	}
 
 	template <typename T>
 	auto deque<T>::Block::back() const -> const_reference {
+#ifndef STLite_NOEXCEPT
 		if (empty()) throw "call Block::back() on an empty block";
+#endif
 		return *__end[-1];
 	}
 
 
 	template <typename T>
-	auto deque<T>::Block::at(size_type pos) -> reference {
-		if (pos >= size()) {
+	auto deque<T>::Block::at(size_type loc) -> reference {
+		if (loc >= size()) {
+#ifndef STLite_NOEXCEPT
 			if (succ->ishead())
-				throw "in Block::at(): argument pos too big";
-			return succ->at(pos - size());
+				throw "in Block::at(): argument loc too big";
+#endif
+			return succ->at(loc - size());
 		}
-		return *__beg[pos];
+		return *__beg[loc];
 	}
 
 	template <typename T>
-	auto deque<T>::Block::at(size_type pos) const -> const_reference {
-		if (pos >= size()) {
+	auto deque<T>::Block::at(size_type loc) const -> const_reference {
+		if (loc >= size()) {
+#ifndef STLite_NOEXCEPT
 			if (succ->ishead())
-				throw "in Block::at(): argument pos too big";
-			return succ->at(pos - size());
+				throw "in Block::at(): argument loc too big";
+#endif
+			return succ->at(loc - size());
 		}
-		return *__beg[pos];
+		return *__beg[loc];
+	}
+
+
+	template <typename T>
+	auto deque<T>::Block::at_spec(size_type loc) -> pair<Self*, pointer*> {
+		if (loc >= size()) {
+#ifndef STLite_NOEXCEPT
+			if (succ->ishead())
+				throw "in Block::at_spec(): argument loc too big";
+#endif
+			return succ->at_spec(loc - size());
+		}
+		return pair<Self*, pointer*>(this, __beg + loc);
+	}
+
+	template <typename T>
+	auto deque<T>::Block::at_spec(size_type loc) const -> pair<const Self*, const pointer*> {
+		if (loc >= size()) {
+#ifndef STLite_NOEXCEPT
+			if (succ->ishead())
+				throw "in Block::at_spec(): argument loc too big";
+#endif
+			return succ->at_spec(loc - size());
+		}
+		return pair<const Self*, const pointer*>(this, __beg + loc);
 	}
 
 /* } */
@@ -443,17 +545,29 @@ public:
 		friend class deque;
 		friend class const_iterator;
 
-		using Up	= Self;
-		using Self	= iterator;
+		using Up		= deque;
+		using Self		= iterator;
+		using loc_type	= pair<Up::Block*, pointer*>;
 
-		size_type pos;
+		size_type index;
+		loc_type loc;
 		Up *par;
 
-		iterator(size_type __pos, Up *__par)
-			: pos(__pos), par(__par) { }
+		auto eval_invalid() const -> bool { return par == nullptr or index >= par->size(); }
+		auto exist_invalid() const -> bool { return par == nullptr or index > par->size(); }
+		auto set_loc() -> void {
+			if (par == nullptr) return;
+			if (index >= par->size()) loc = par->end().loc;
+			else loc = par->__data->succ->at_spec(index);
+		}
+
+		iterator(size_type __index, Up *__par)
+			: index(__index), par(__par) { set_loc(); }
+		iterator(size_type __index, loc_type __loc, Up *__par)
+			: index(__index), loc(__loc), par(__par) { }
 
 	public:
-		iterator(): pos(-1), par(nullptr) { }
+		iterator(): index(-1), loc(nullptr, nullptr), par(nullptr) { }
 		iterator(Self &&) = default;
 		iterator(const Self &) = default;
 
@@ -464,48 +578,78 @@ public:
 		 *   if there are not enough elements, iterator becomes invalid
 		 * as well as operator-
 		 */
-		auto operator + (difference_type diff) const -> Self { return Self(pos + diff, par); }
-		auto operator - (difference_type diff) const -> Self { return Self(pos - diff, par); }
-		auto operator += (difference_type diff) -> Self& { return pos += diff, *this; }
-		auto operator -= (difference_type diff) -> Self& { return pos -= diff, *this; }
+		auto operator + (difference_type diff) const -> Self;
+		auto operator - (difference_type diff) const -> Self;
+		auto operator += (difference_type diff) -> Self& { return *this = *this + diff; }
+		auto operator -= (difference_type diff) -> Self& { return *this = *this - diff; }
 
 		// return the distance between two iterator,
 		// if these two iterators points to different vectors, throw invaild_iterator.
 		auto operator - (const Self &rhs) const -> difference_type {
 			if (par != rhs.par) throw invalid_iterator();
-			return static_cast<difference_type>(pos - rhs.pos);
+			return static_cast<difference_type>(index - rhs.index);
 		}
 
-		auto operator ++ (int) -> Self { return Self(pos++, par); }
-		auto operator -- (int) -> Self { return Self(pos--, par); }
+		auto operator ++ (int) -> Self { Self tmp = *this; *this = *this + 1; return tmp; }
+		auto operator -- (int) -> Self { Self tmp = *this; *this = *this - 1; return tmp; }
 
-		auto operator ++ () -> Self& { return ++pos, *this; }
-		auto operator -- () -> Self& { return --pos, *this; }
+		auto operator ++ () -> Self& { return *this = *this + 1; }
+		auto operator -- () -> Self& { return *this = *this - 1; }
 
 		auto operator * () const -> reference;
 		auto operator -> () const -> pointer;
 
-		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
-		auto operator == (const const_iterator &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
+		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
+		auto operator == (const const_iterator &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
 
-		auto operator != (const Self &rhs) const -> bool { return par != rhs.par or pos != rhs.pos; }
-		auto operator != (const const_iterator &rhs) const -> bool { return par != rhs.par or pos != rhs.pos; }
+		auto operator != (const Self &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
+		auto operator != (const const_iterator &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
 	};
 
 /* impl deque<T>::iterator { */
 
 	template <typename T>
+	auto deque<T>::iterator::operator + (difference_type diff) const -> Self {
+		if (diff < 0) return *this - (-diff);
+		if (exist_invalid()) throw invalid_iterator();
+		if (index + diff >= par->size())
+			return par->end();
+		Self dst = *this; dst.index += diff;
+		for ( ; ; ) {
+			difference_type rest = dst.loc.first->end() - dst.loc.second;
+			if (diff < rest) return dst.loc.second += diff, dst;
+			dst.loc.first = dst.loc.first->succ;
+			dst.loc.second = dst.loc.first->begin();
+			diff -= rest;
+		}
+	}
+
+	template <typename T>
+	auto deque<T>::iterator::operator - (difference_type diff) const -> Self {
+		if (diff < 0) return *this + (-diff);
+		if (exist_invalid()) throw invalid_iterator();
+		if (index - diff < 0 or index - diff >= par->size())
+			return par->end();
+		Self dst = *this; dst.index -= diff;
+		for ( ; ; ) {
+			difference_type rest = dst.loc.second - dst.loc.first->begin();
+			if (diff <= rest) return dst.loc.second -= diff, dst;
+			dst.loc.first = dst.loc.first->prev;
+			dst.loc.second = dst.loc.first->end();
+			diff -= rest;
+		}
+	}
+
+	template <typename T>
 	auto deque<T>::iterator::operator * () const -> reference {
-		if (par == nullptr or pos >= par->size())
-			throw invalid_iterator();
-		return par->__data->at(pos);
+		if (eval_invalid()) throw invalid_iterator();
+		return **loc.second;
 	}
 
 	template <typename T>
 	auto deque<T>::iterator::operator -> () const -> pointer {
-		if (par == nullptr or pos >= par->size())
-			throw invalid_iterator();
-		return std::addressof(par->__data->at(pos));
+		if (eval_invalid()) throw invalid_iterator();
+		return *loc.second;
 	}
 
 /* } */
@@ -519,20 +663,32 @@ public:
 		friend class deque;
 		friend class iterator;
 
-		using Up	= Self;
-		using Self	= const_iterator;
+		using Up		= deque;
+		using Self		= const_iterator;
+		using loc_type	= pair<const Up::Block*, const pointer*>;
 
-		size_type pos;
+		size_type index;
+		loc_type loc;
 		const Up *par;
 
-		const_iterator(size_type __pos, const Up *__par)
-			: pos(__pos), par(__par) { }
+		auto eval_invalid() const -> bool { return par == nullptr or index >= par->size(); }
+		auto exist_invalid() const -> bool { return par == nullptr or index > par->size(); }
+		auto set_loc() -> void {
+			if (par == nullptr) return;
+			if (index >= par->size()) loc = par->cend().loc;
+			else loc = par->__data->succ->at_spec(index);
+		}
+
+		const_iterator(size_type __index, const Up *__par)
+			: index(__index), par(__par) { set_loc(); }
+		const_iterator(size_type __index, loc_type __loc, const Up *__par)
+			: index(__index), loc(__loc), par(__par) { }
 
 	public:
-		const_iterator(): pos(-1), par(nullptr) { }
+		const_iterator(): index(-1), loc(nullptr, nullptr), par(nullptr) { }
 		const_iterator(Self &&) = default;
 		const_iterator(const Self &) = default;
-		const_iterator(const iterator &other): pos(other.pos), par(other.par) { }
+		const_iterator(const iterator &other): index(other.index), loc(loc), par(other.par) { }
 
 		auto operator = (const Self &) -> Self& = default;
 
@@ -541,48 +697,78 @@ public:
 		 *   if there are not enough elements, iterator becomes invalid
 		 * as well as operator-
 		 */
-		auto operator + (difference_type diff) const -> Self { return Self(pos + diff, par); }
-		auto operator - (difference_type diff) const -> Self { return Self(pos - diff, par); }
-		auto operator += (difference_type diff) -> Self& { return pos += diff, *this; }
-		auto operator -= (difference_type diff) -> Self& { return pos -= diff, *this; }
+		auto operator + (difference_type diff) const -> Self;
+		auto operator - (difference_type diff) const -> Self;
+		auto operator += (difference_type diff) -> Self& { return *this = *this + diff; }
+		auto operator -= (difference_type diff) -> Self& { return *this = *this - diff; }
 
 		// return the distance between two iterator,
 		// if these two iterators points to different vectors, throw invaild_iterator.
 		auto operator - (const Self &rhs) const -> difference_type {
 			if (par != rhs.par) throw invalid_iterator();
-			return static_cast<difference_type>(pos - rhs.pos);
+			return static_cast<difference_type>(index - rhs.index);
 		}
 
-		auto operator ++ (int) -> Self { return Self(pos++, par); }
-		auto operator -- (int) -> Self { return Self(pos--, par); }
+		auto operator ++ (int) -> Self { Self tmp = *this; *this = *this + 1; return tmp; }
+		auto operator -- (int) -> Self { Self tmp = *this; *this = *this - 1; return tmp; }
 
-		auto operator ++ () -> Self& { return ++pos, *this; }
-		auto operator -- () -> Self& { return --pos, *this; }
+		auto operator ++ () -> Self& { return *this = *this + 1; }
+		auto operator -- () -> Self& { return *this = *this - 1; }
 
 		auto operator * () const -> const_reference;
 		auto operator -> () const -> const_pointer;
 
-		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
-		auto operator == (const iterator &rhs) const -> bool { return par == rhs.par and pos == rhs.pos; }
+		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
+		auto operator == (const iterator &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
 
-		auto operator != (const Self &rhs) const -> bool { return par != rhs.par or pos != rhs.pos; }
-		auto operator != (const iterator &rhs) const -> bool { return par != rhs.par or pos != rhs.pos; }
+		auto operator != (const Self &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
+		auto operator != (const iterator &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
 	};
 
 /* impl deque<T>::const_iterator { */
 
 	template <typename T>
+	auto deque<T>::const_iterator::operator + (difference_type diff) const -> Self {
+		if (diff < 0) return *this - (-diff);
+		if (exist_invalid()) throw invalid_iterator();
+		if (index + diff >= par->size())
+			return par->cend();
+		Self dst = *this; dst.index += diff;
+		for ( ; ; ) {
+			difference_type rest = dst.loc.first->cend() - dst.loc.second;
+			if (diff < rest) return dst.loc.second += diff, dst;
+			dst.loc.first = dst.loc.first->succ;
+			dst.loc.second = dst.loc.first->cbegin();
+			diff -= rest;
+		}
+	}
+
+	template <typename T>
+	auto deque<T>::const_iterator::operator - (difference_type diff) const -> Self {
+		if (diff < 0) return *this + (-diff);
+		if (exist_invalid()) throw invalid_iterator();
+		if (index - diff < 0 or index - diff >= par->size())
+			return par->cend();
+		Self dst = *this; dst.index -= diff;
+		for ( ; ; ) {
+			difference_type rest = dst.loc.second - dst.loc.first->cbegin();
+			if (diff <= rest) return dst.loc.second -= diff, dst;
+			dst.loc.first = dst.loc.first->prev;
+			dst.loc.second = dst.loc.first->cend();
+			diff -= rest;
+		}
+	}
+
+	template <typename T>
 	auto deque<T>::const_iterator::operator * () const -> const_reference {
-		if (par == nullptr or pos >= par->size())
-			throw invalid_iterator();
-		return par->__data->at(pos);
+		if (eval_invalid()) throw invalid_iterator();
+		return **loc.second;
 	}
 
 	template <typename T>
 	auto deque<T>::const_iterator::operator -> () const -> const_pointer {
-		if (par == nullptr or pos >= par->size())
-			throw invalid_iterator();
-		return std::addressof(par->__data->at(pos));
+		if (eval_invalid()) throw invalid_iterator();
+		return *loc.second;
 	}
 
 /* } */
@@ -636,27 +822,35 @@ public:
 
 
 	template <typename T>
-	auto deque<T>::at(const size_type &pos) -> reference {
-		if (pos >= size()) throw index_out_of_bound();
+	auto deque<T>::at(const size_type &loc) -> reference {
+		if (loc >= size()) throw index_out_of_bound();
+#ifndef STLite_NOEXCEPT
 		try {
-			return __data->at(pos);
+			return __data->at(loc);
 		} catch (const char *msg) {
 			puts("\nexception caught!");
 			puts(msg);
 			throw index_out_of_bound();
 		}
+#else
+			return __data->at(loc);
+#endif
 	}
 
 	template <typename T>
-	auto deque<T>::at(const size_type &pos) const -> const_reference {
-		if (pos >= size()) throw index_out_of_bound();
+	auto deque<T>::at(const size_type &loc) const -> const_reference {
+		if (loc >= size()) throw index_out_of_bound();
+#ifndef STLite_NOEXCEPT
 		try {
-			return __data->at(pos);
+			return __data->at(loc);
 		} catch (const char *msg) {
 			puts("\nexception caught!");
 			puts(msg);
 			throw index_out_of_bound();
 		}
+#else
+			return __data->at(loc);
+#endif
 	}
 
 
@@ -694,20 +888,22 @@ public:
 	}
 
 	template <typename T>
-	auto deque<T>::insert(iterator pos, const value_type &value) -> iterator {
-		if (pos.par != this or pos.pos > size())
+	auto deque<T>::insert(iterator it, const value_type &value) -> iterator {
+		if (it.par != this or it.index > size())
 			throw invalid_iterator();
-		__data->succ->insert(pos.pos, value); ++__size;
-		return pos;
+		it.loc.first->insert(it.loc.second - it.loc.first->begin(), value);
+		++__size;
+		return iterator(it.index, this);
 	}
 
 	template <typename T>
-	auto deque<T>::erase(iterator pos) -> iterator {
+	auto deque<T>::erase(iterator it) -> iterator {
 		if (empty()) throw container_is_empty();
-		if (pos.par != this or pos.pos >= size())
+		if (it.par != this or it.index >= size())
 			throw invalid_iterator();
-		__data->succ->erase(pos.pos); --__size;
-		return pos;
+		it.loc.first->erase(it.loc.second - it.loc.first->begin());
+		--__size;
+		return iterator(it.index, this);
 	}
 
 	template <typename T>
