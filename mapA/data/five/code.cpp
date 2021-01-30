@@ -15,7 +15,7 @@ using namespace std;
 bool check1(){ //insert by []
 	int a, b;
 	sjtu::map<int, int> Q;
-	std::map<int, int> stdQ;	
+	std::map<int, int> stdQ;
 	for(int i = 1; i <= 100000; i++){
 		a = rand(); b = rand();
 		if(!Q.count(a)){
@@ -59,35 +59,35 @@ bool check2(){//Q.insert
 	if(Q.insert(sjtu::map<int, int>::value_type(6, 9)).second) return 0;
 	it = Q.insert(sjtu::pair<int, int>(6, 9)).first;
 	if(it -> second != Q[6]) return 0;
-	
+
 	it = Q.insert(sjtu::map<int, int>::value_type(325, 666)).first;
 	if(it -> first != 325 || it -> second != 666) return 0;
 	return 1;
 }
 
-bool check3(){//find remove 
+bool check3(){//find remove
 	sjtu::map<int, int> Q;
 	std::map<int, int> stdQ;
 	int num[30001];
 	num[0] = 0;
-	for(int i = 1; i <= 30000; i++) num[i] = num[i - 1] + rand() % 325 + 1; 
+	for(int i = 1; i <= 30000; i++) num[i] = num[i - 1] + rand() % 325 + 1;
 	for(int i = 1; i <= 60000; i++) swap(num[rand() % 30000 + 1], num[rand() % 30000 + 1]);
 	for(int i = 1; i <= 30000; i++){
 		int t = rand();
 		stdQ[num[i]] = t; Q[num[i]] = t;
 	}
-	
+
 	sjtu::map<int, int>::iterator it;
 	std::map<int, int>::iterator stdit;
 	for(int i = 1; i <= 60000; i++) swap(num[rand() % 30000 + 1], num[rand() % 30000 + 1]);
 	for(int i = 1; i <= 10325; i++){
-		it = Q.find(num[i]); 
+		it = Q.find(num[i]);
 		Q.erase(it);
 		stdit = stdQ.find(num[i]); stdQ.erase(stdit);
-	}	
+	}
 	if(Q.size() != stdQ.size()) return 0;
 	it = Q.begin();
-	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){ 
+	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){
 		if(stdit -> first != it -> first) return 0;
 		if(stdit -> second != (*it).second) return 0;
 		it++;
@@ -132,7 +132,7 @@ bool check4(){//const_iterator
 	return 1;
 }
 
-bool check5(){// insert && remove 
+bool check5(){// insert && remove
 	int a, b;
 	sjtu::map<int, int> Q;
 	std::map<int, int> stdQ;
@@ -143,14 +143,14 @@ bool check5(){// insert && remove
 		}
 	}
 	while(!stdQ.empty()){
-		if(Q.begin() -> first != stdQ.begin() -> first || Q.begin() -> second != stdQ.begin() -> second) return 0; 
+		if(Q.begin() -> first != stdQ.begin() -> first || Q.begin() -> second != stdQ.begin() -> second) return 0;
 		Q.erase(Q.begin());
 		stdQ.erase(stdQ.begin());
 	}
 	if(Q.begin() != Q.end()) return 0;
 	Q.clear(); stdQ.clear();
 	sjtu::map<int, int> :: iterator it;
-	std::map<int, int> :: iterator stdit;	
+	std::map<int, int> :: iterator stdit;
 	int num[3001], left[3001];
 	memset(left, 0, sizeof(left));
 	for(int i = 1; i <= 2000; i++) num[i] = i;
@@ -172,7 +172,7 @@ bool check5(){// insert && remove
 	}
 	if(Q.size() != stdQ.size()) return 0;
 	it = Q.begin();
-	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){ 
+	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){
 		if(stdit -> first != it -> first) return 0;
 		if(stdit -> second != (*it).second) return 0;
 		++it;
@@ -216,7 +216,7 @@ bool check6(){ // copy test
 	}
 	while(!Q.empty()) Q.erase(Q.begin());
 	if(Q.size() != 0 || Q.begin() != Q.end()) return 0;
-	
+
 	stdit = stdQ.begin();
 	for(it = Q1.begin(); it != Q1.end(); it++){
 		if(stdit -> first != it -> first) return 0;
@@ -229,10 +229,10 @@ bool check6(){ // copy test
 		if(stdit -> second != (*it).second) return 0;
 		stdit--;
 	}
-	return 1; 
+	return 1;
 }
 
-bool check7(){ //"=" operator 
+bool check7(){ //"=" operator
 	int a, b;
 	sjtu::map<int, int> Q1;
 	std::map<int, int> stdQ;
@@ -263,7 +263,7 @@ bool check7(){ //"=" operator
 	}
 	while(!Q.empty()) Q.erase(Q.begin());
 	if(Q.size() != 0 || Q.begin() != Q.end()) return 0;
-	
+
 	stdit = stdQ.begin();
 	for(it = Q1.begin(); it != Q1.end(); it++){
 		if(stdit -> first != it -> first) return 0;
@@ -276,7 +276,7 @@ bool check7(){ //"=" operator
 		if(stdit -> second != (*it).second) return 0;
 		stdit--;
 	}
-	return 1; 
+	return 1;
 }
 
 bool check8(){ //  clear && insert
@@ -297,7 +297,7 @@ bool check8(){ //  clear && insert
 		a = rand(); b = rand();
 		if(!stdQ.count(a)){
 			if(Q.count(a)) return 0;
-			stdQ[a] = b; 
+			stdQ[a] = b;
 			Q.insert(sjtu::map<int, int> :: value_type(a, b));
 		}
 	}
@@ -342,7 +342,7 @@ bool check9(){//just have fun!
 	if(!(itQ != itO)) return 0; if(!(citQ != citO)) return 0;
 	if(itQ == citO) return 0; if(itO == citQ) return 0;
 	if(!(itQ != citO)) return 0; if(!(itO != citQ)) return 0;
-	if(!(citQ == itQ)) return 0; if(citQ != itQ) return 0; 
+	if(!(citQ == itQ)) return 0; if(citQ != itQ) return 0;
 	return 1;
 }
 
@@ -370,14 +370,14 @@ bool check10(){//class writen by users
 		}
 	}
 	while(!stdQ.empty()){
-		if(Q.begin() -> first != stdQ.begin() -> first || Q.begin() -> second != stdQ.begin() -> second) return 0; 
+		if(Q.begin() -> first != stdQ.begin() -> first || Q.begin() -> second != stdQ.begin() -> second) return 0;
 		Q.erase(Q.begin());
 		stdQ.erase(stdQ.begin());
 	}
 	if(Q.begin() != Q.end()) return 0;
 	Q.clear(); stdQ.clear();
 	sjtu::map<node, int> :: iterator it;
-	std::map<node, int> :: iterator stdit;	
+	std::map<node, int> :: iterator stdit;
 	int num[3001], left[3001];
 	memset(left, 0, sizeof(left));
 	for(int i = 1; i <= 2000; i++) num[i] = i;
@@ -399,7 +399,7 @@ bool check10(){//class writen by users
 	}
 	if(Q.size() != stdQ.size()) return 0;
 	it = Q.begin();
-	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){ 
+	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){
 		if(stdit -> first != it -> first) return 0;
 		if(stdit -> second != (*it).second) return 0;
 		++it;
@@ -410,7 +410,7 @@ bool check10(){//class writen by users
 		if(stdit -> second != (*it).second) return 0;
 		stdit--;
 	}
-	return 1;	
+	return 1;
 }
 
 bool check11(){
@@ -452,7 +452,7 @@ bool check11(){
 	try{
 		p = Q.at("cc");
 	}
-	catch(...) {OK++;}	
+	catch(...) {OK++;}
 	const sjtu::map<string, int> Qc(Q);
 	try{
 		Qc["hehe"];
@@ -466,13 +466,13 @@ bool check12(){ // erase(it++)
 	std::map<int, int> stdQ;
 	int num[30001];
 	num[0] = 0;
-	for(int i = 1; i <= 30000; i++) num[i] = num[i - 1] + rand() % 325 + 1; 
+	for(int i = 1; i <= 30000; i++) num[i] = num[i - 1] + rand() % 325 + 1;
 	for(int i = 1; i <= 60000; i++) swap(num[rand() % 30000 + 1], num[rand() % 30000 + 1]);
 	for(int i = 1; i <= 30000; i++){
 		int t = rand();
 		stdQ[num[i]] = t; Q[num[i]] = t;
 	}
-	
+
 	sjtu::map<int, int>::iterator it;
 	std::map<int, int>::iterator stdit;
 	for(int i = 1; i <= 60000; i++) swap(num[rand() % 30000 + 1], num[rand() % 30000 + 1]);
@@ -485,10 +485,10 @@ bool check12(){ // erase(it++)
 		else{
 			if(it -> first != stdit -> first) return 0;
 		}
-	}	
+	}
 	if(Q.size() != stdQ.size()) return 0;
 	it = Q.begin();
-	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){ 
+	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){
 		if(stdit -> first != it -> first) return 0;
 		if(stdit -> second != (*it).second) return 0;
 		it++;
@@ -507,13 +507,13 @@ bool check13(){ // erase(it--)
 	std::map<int, int> stdQ;
 	int num[30001];
 	num[0] = 0;
-	for(int i = 1; i <= 30000; i++) num[i] = num[i - 1] + rand() % 325 + 1; 
+	for(int i = 1; i <= 30000; i++) num[i] = num[i - 1] + rand() % 325 + 1;
 	for(int i = 1; i <= 60000; i++) swap(num[rand() % 30000 + 1], num[rand() % 30000 + 1]);
 	for(int i = 1; i <= 30000; i++){
 		int t = rand();
 		stdQ[num[i]] = t; Q[num[i]] = t;
 	}
-	
+
 	sjtu::map<int, int>::iterator it;
 	std::map<int, int>::iterator stdit;
 	for(int i = 1; i <= 60000; i++) swap(num[rand() % 30000 + 1], num[rand() % 30000 + 1]);
@@ -521,10 +521,10 @@ bool check13(){ // erase(it--)
 		it = Q.find(num[i]); if(it != Q.begin()) Q.erase(it--);
 		stdit = stdQ.find(num[i]); if(stdit != stdQ.begin()) stdQ.erase(stdit--);
 		if(it -> first != stdit -> first)return 0;
-	}	
+	}
 	if(Q.size() != stdQ.size()) return 0;
 	it = Q.begin();
-	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){ 
+	for(stdit = stdQ.begin(); stdit != stdQ.end(); stdit++){
 		if(stdit -> first != it -> first) return 0;
 		if(stdit -> second != (*it).second) return 0;
 		it++;
@@ -540,7 +540,7 @@ bool check13(){ // erase(it--)
 
 bool check14(){// have fun
 	sjtu::map<int, int> Q;
-	Q[3] = 25; Q[25] = 3; Q[1314] = 520; Q[3225] = 1; Q[10000] = 6666; 
+	Q[3] = 25; Q[25] = 3; Q[1314] = 520; Q[3225] = 1; Q[10000] = 6666;
 	sjtu::map<int, int>::iterator it;
 	it = Q.find(3225);
 	Q.erase(--Q.end());
@@ -557,7 +557,7 @@ bool check14(){// have fun
 	sjtu::map<int, int> :: iterator it;
 	it = Q.begin();
 	//it -> first++;
-	//it = Q_const.begin();	
+	//it = Q_const.begin();
 	//it = Q_const.find(6);
 	sjtu::map<int, int> :: const_iterator cit;
 	cit = Q_const.find(3);
@@ -593,7 +593,7 @@ void easy_test(){
 			left[num[i]]++;
 		}
 	}
-	for(it = Q.begin(); it != Q.end(); ++it){ 
+	for(it = Q.begin(); it != Q.end(); ++it){
 		cout << it -> first << " "  << it -> second << " ";
 	}
 	cout << endl;
@@ -619,4 +619,3 @@ int main(){
 	if(!check14()) cout << "Test 14 Failed......" << endl; else cout << "Test 14 Passed!" << endl;
 	return 0;
 }
-

@@ -20,7 +20,7 @@ private:
 	const int id, total;
 	long dfn;
 	int counter, enter;
-public:	
+public:
 	TestCore(const char *title, const int &id, const int &total) : title(title), id(id), total(total), dfn(clock()), counter(0), enter(0) {
 	}
 	void init() {
@@ -50,7 +50,7 @@ class IntA{
 public:
 	static int counter;
 	int val;
-	
+
 	IntA(int val) : val(val) {
 		counter++;
 	}
@@ -63,14 +63,14 @@ public:
 	IntA & operator = (const IntA &rhs) {
 		assert(false);
 	}
-	
+
 	bool operator ==(const IntA &rhs) {
 		return val == rhs.val;
 	}
 	friend bool operator < (const IntA &lhs, const IntA &rhs) {
 		return lhs.val > rhs.val;
 	}
-	
+
 	~IntA() {
 		counter--;
 	}
@@ -83,26 +83,26 @@ public:
 	int *val;
 	explicit IntB(int val = 0) : val(new int(val)) {
 	}
-	
+
 	IntB(const IntB &rhs) {
 		val = new int(*rhs.val);
 	}
-	
+
 	IntB & operator =(const IntB &rhs) {
 		if (this == &rhs) return *this;
 		delete this->val;
 		val = new int(*rhs.val);
 		return *this;
 	}
-	
+
 	bool operator !=(const IntB &rhs) const {
 		return *val != *rhs.val;
 	}
-	
+
 	bool operator ==(const IntB &rhs) const {
 		return *val == *rhs.val;
 	}
-	
+
 	~IntB() {
 		delete this->val;
 	}
@@ -357,7 +357,7 @@ void tester7() {
 			}
 			console.showProgress();
 		}
-		
+
 		itB = tmp2.begin();
 		for (auto itA = tmp1.begin(); itA != tmp1.end(); ++itA, ++itB) {
 			if ((itA -> first).val != (itA -> first).val || (itB -> first).val != (itB -> first).val) {
@@ -408,7 +408,7 @@ void tester8() {
 			}
 			console.showProgress();
 		}
-		
+
 		itB = tmp2.cbegin();
 		for (auto itA = tmp1.begin(); itA != tmp1.end(); ++itA, ++itB) {
 			if ((itA -> first).val != (itA -> first).val || (itB -> first).val != (itB -> first).val) {
@@ -496,7 +496,7 @@ void tester10() {
 			src1.insert(sjtu::map<IntA, IntB, Compare>::value_type(x, tmp));
 			console.showProgress();
 		}
-		
+
 		auto itB = srcmap.begin();
 		for (auto itA = stdmap.begin(); itA != stdmap.end(); ++itA, ++itB) {
 			if ((itA -> first).val != (itA -> first).val || (itB -> first).val != (itB -> first).val) {
@@ -505,7 +505,7 @@ void tester10() {
 			}
 			console.showProgress();
 		}
-		
+
 		itB = src1.begin();
 		for (auto itA = std1.begin(); itA != std1.end(); ++itA, ++itB) {
 			if ((itA -> first).val != (itA -> first).val || (itB -> first).val != (itB -> first).val) {
@@ -514,7 +514,7 @@ void tester10() {
 			}
 			console.showProgress();
 		}
-		
+
 		itB = src2.begin();
 		for (auto itA = std2.begin(); itA != std2.end(); ++itA, ++itB) {
 			if ((itA -> first).val != (itA -> first).val || (itB -> first).val != (itB -> first).val) {
@@ -573,16 +573,16 @@ void tester11() {
 			}
 			console.showProgress();
 		}
-		
+
 		const auto stdtmp(stdmap);
 		const auto srctmp(srcmap);
-		
+
 		std::map<IntA, IntB, Compare>::const_iterator citA = stdtmp.cbegin();
 		sjtu::map<IntA, IntB, Compare>::const_iterator citB = srctmp.cbegin();
-		
+
 		stdtmp.size();
 		srctmp.size();
-		
+
 		for (auto x : ret) {
 			if (x >= 0) {
 				if (stdmap.at(x) != srcmap.at(x)) {

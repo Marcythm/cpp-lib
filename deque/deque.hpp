@@ -54,7 +54,7 @@ public:
 	using pointer			= value_type*;
 	using const_pointer		= const value_type*;
 	using size_type			= size_t;
-	using difference_type	= int;
+	using difference_type	= std::ptrdiff_t;
 
 private:
 	struct Block;
@@ -596,7 +596,9 @@ public:
 		auto operator ++ () -> Self& { return *this = *this + 1; }
 		auto operator -- () -> Self& { return *this = *this - 1; }
 
-		auto operator * () const -> reference;
+		auto operator * () -> reference;
+		auto operator * () const -> const_reference;
+		auto operator -> () -> pointer;
 		auto operator -> () const -> pointer;
 
 		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
@@ -641,7 +643,19 @@ public:
 	}
 
 	template <typename T>
-	auto deque<T>::iterator::operator * () const -> reference {
+	auto deque<T>::iterator::operator * () -> reference {
+		if (eval_invalid()) throw invalid_iterator();
+		return **loc.second;
+	}
+
+	template <typename T>
+	auto deque<T>::iterator::operator -> () -> pointer {
+		if (eval_invalid()) throw invalid_iterator();
+		return *loc.second;
+	}
+
+	template <typename T>
+	auto deque<T>::iterator::operator * () const -> const_reference {
 		if (eval_invalid()) throw invalid_iterator();
 		return **loc.second;
 	}

@@ -15,7 +15,7 @@ int rand()
 class Key{
 public:
 	int x;
-	Key(const Key &other):x(other.x){}	
+	Key(const Key &other):x(other.x){}
 	Key(int x):x(x){}
 };
 class Data{
@@ -30,19 +30,19 @@ public:
 	Data & operator = (const Data &other){
 		if(this == &other) return *this;
 		*x = *(other.x);
-		return *this;	
+		return *this;
 	}
 };
 std::ostream &operator <<(std::ostream &os, const Data &a){
 	os<<*(a.x);
-	return os;	
+	return os;
 }
 std::ostream &operator <<(std::ostream &os, const Key &a){
 	os<<(a.x);
-	return os;	
+	return os;
 }
 struct cmp{
-	bool operator ()(const Key &a,const Key &b)const{return a.x > b.x;} 	
+	bool operator ()(const Key &a,const Key &b)const{return a.x > b.x;}
 };
 sjtu::map<Key,Data,cmp> map;
 int num = 1000;
@@ -58,8 +58,8 @@ void test_insert(){
 	}
 	for(int i=1;i<=num;i++)
 	{
-		try{	
-			map.at(Key(rand() % 10000)) = Data(rand());	
+		try{
+			map.at(Key(rand() % 10000)) = Data(rand());
 		}catch(...){}
 	}
 	for(int i=1;i<=num;i++){
@@ -130,7 +130,7 @@ void test_find(){
 		else std::cout<<it->first<<' '<<it->second<<' ';
 	}
 	puts("");
-	
+
 	for(int i=1;i<=num;i++){
 		int tmp(rand() % 10000);
 		sjtu::map<Key,Data,cmp>::const_iterator it(mm.find(Key(tmp)));
@@ -144,25 +144,25 @@ void test_throw(){
 	sjtu::map<Key,Data,cmp>::iterator it;
 	it = map.begin();
 	try{
-		it--;	
+		it--;
 	}catch(...){puts("OK1");}
 	try{
-		--it;	
+		--it;
 	}catch(...){puts("OK2");}
 	it = map.end();
 	try{
-		it++;	
+		it++;
 	}catch(...){puts("OK3");}
 	try{
-		++it;	
+		++it;
 	}catch(...){puts("OK4");}
 	sjtu::map<Key,Data,cmp> new_map;
 	it = new_map.begin();
 	try{
-		it++;	
+		it++;
 	}catch(...){puts("OK5");}
 	try{
-		++it;	
+		++it;
 	}catch(...){puts("OK6");}
 }
 void test_const_throw(){
@@ -171,25 +171,25 @@ void test_const_throw(){
 	sjtu::map<Key,Data,cmp>::const_iterator it;
 	it = mm.cbegin();
 	try{
-		it--;	
+		it--;
 	}catch(...){puts("OK7");}
 	try{
-		--it;	
+		--it;
 	}catch(...){puts("OK8");}
 	it = map.cend();
 	try{
-		it++;	
+		it++;
 	}catch(...){puts("OK9");}
 	try{
-		++it;	
+		++it;
 	}catch(...){puts("OK10");}
 	const sjtu::map<Key,Data,cmp> new_map;
 	it = new_map.cbegin();
 	try{
-		it++;	
+		it++;
 	}catch(...){puts("OK11");}
 	try{
-		++it;	
+		++it;
 	}catch(...){puts("OK12");}
 }
 void test_copy()
