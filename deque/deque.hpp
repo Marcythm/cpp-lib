@@ -596,9 +596,7 @@ public:
 		auto operator ++ () -> Self& { return *this = *this + 1; }
 		auto operator -- () -> Self& { return *this = *this - 1; }
 
-		auto operator * () -> reference;
-		auto operator * () const -> const_reference;
-		auto operator -> () -> pointer;
+		auto operator * () const -> reference;
 		auto operator -> () const -> pointer;
 
 		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
@@ -643,19 +641,7 @@ public:
 	}
 
 	template <typename T>
-	auto deque<T>::iterator::operator * () -> reference {
-		if (eval_invalid()) throw invalid_iterator();
-		return **loc.second;
-	}
-
-	template <typename T>
-	auto deque<T>::iterator::operator -> () -> pointer {
-		if (eval_invalid()) throw invalid_iterator();
-		return *loc.second;
-	}
-
-	template <typename T>
-	auto deque<T>::iterator::operator * () const -> const_reference {
+	auto deque<T>::iterator::operator * () const -> reference {
 		if (eval_invalid()) throw invalid_iterator();
 		return **loc.second;
 	}
