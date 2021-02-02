@@ -63,20 +63,18 @@ public:
 	using size_type			= size_t;
 	using difference_type	= std::ptrdiff_t;
 
-	/**
-	 * see BidirectionalIterator at CppReference for help.
-	 *
-	 * if there is anything wrong throw invalid_iterator.
-	 *     like it = map.begin(); --it;
-	 *       or it = map.end(); ++end();
-	 */
 	class iterator;
 	class const_iterator;
 
+private:
+
+
+public:
 	map();
 	map(const Self &other);
-	auto operator = (const Self &other) -> Self&;
 	~map();
+
+	auto operator = (const Self &other) -> Self&;
 	/**
 	 * TODO
 	 * access specified element with bounds checking

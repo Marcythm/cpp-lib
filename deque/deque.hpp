@@ -114,68 +114,68 @@ public:
 
 
 
-	template <typename T>
-	struct deque<T>::Block {
-		static constexpr size_type CONTENT_LIMIT	= 1000;
-		static constexpr size_type HALF_BLOCK_SIZE	= 1500 + 15;
-		static constexpr size_type BLOCK_SIZE		= CONTENT_LIMIT * 3 + 30;
+template <typename T>
+struct deque<T>::Block {
+	static constexpr size_type CONTENT_LIMIT	= 1000;
+	static constexpr size_type HALF_BLOCK_SIZE	= 1500 + 15;
+	static constexpr size_type BLOCK_SIZE		= CONTENT_LIMIT * 3 + 30;
 
-		using Self = Block;
-		class noinit_tag {};
+	using Self = Block;
+	class noinit_tag {};
 
-		Self *prev, *succ;
-		pointer *__data, *__beg, *__end;
+	Self *prev, *succ;
+	pointer *__data, *__beg, *__end;
 
-		Block();
-		Block(noinit_tag);
-		Block(pointer *, size_type);
-		Block(const Self &);
-		~Block();
+	Block();
+	Block(noinit_tag);
+	Block(pointer *, size_type);
+	Block(const Self &);
+	~Block();
 
-		auto clone() const -> Self*;
-		auto data() const -> pointer* { return __beg; }
-		auto size() const -> size_type { return __end - __beg; }
-		auto clear() -> void { __beg = __end = __data + HALF_BLOCK_SIZE; }
-		auto empty() const -> bool { return __beg == __end; }
-		auto cap_back() const -> size_type { return __data + BLOCK_SIZE - __end; }
-		auto ishead() const -> bool { return __data == nullptr; }
+	auto clone() const -> Self*;
+	auto data() const -> pointer* { return __beg; }
+	auto size() const -> size_type { return __end - __beg; }
+	auto clear() -> void { __beg = __end = __data + HALF_BLOCK_SIZE; }
+	auto empty() const -> bool { return __beg == __end; }
+	auto cap_back() const -> size_type { return __data + BLOCK_SIZE - __end; }
+	auto ishead() const -> bool { return __data == nullptr; }
 
-		auto begin() -> pointer* { return __beg; }
-		auto cbegin() const -> const pointer* { return __beg; }
-		auto end() -> pointer* { return __end; }
-		auto cend() const -> const pointer* { return __end; }
+	auto begin() -> pointer* { return __beg; }
+	auto cbegin() const -> const pointer* { return __beg; }
+	auto end() -> pointer* { return __end; }
+	auto cend() const -> const pointer* { return __end; }
 
-		auto append_unchecked(pointer *, size_type, bool) -> void;
-		auto append(pointer *, size_type, bool) -> void;
-		auto move_data_in_block(pointer *) -> void;
-		auto reserve(size_type) -> void;
+	auto append_unchecked(pointer *, size_type, bool) -> void;
+	auto append(pointer *, size_type, bool) -> void;
+	auto move_data_in_block(pointer *) -> void;
+	auto reserve(size_type) -> void;
 
-		auto link(Self *) -> Self*;
-		auto cut() -> Self*;
-		auto merge() -> Self*;
-		auto split(size_type) -> Self*;
-		auto adjust() -> void;
+	auto link(Self *) -> Self*;
+	auto cut() -> Self*;
+	auto merge() -> Self*;
+	auto split(size_type) -> Self*;
+	auto adjust() -> void;
 
-		auto push_front(const value_type &value) -> void { *--__beg = new value_type(value); adjust(); }
-		auto push_back(const value_type &value) -> void { *__end++ = new value_type(value); adjust(); }
-		auto pop_front() -> void;
-		auto pop_back() -> void;
+	auto push_front(const value_type &value) -> void { *--__beg = new value_type(value); adjust(); }
+	auto push_back(const value_type &value) -> void { *__end++ = new value_type(value); adjust(); }
+	auto pop_front() -> void;
+	auto pop_back() -> void;
 
-		auto insert(size_type, const value_type &) -> void;
-		auto erase(size_type) -> void;
+	auto insert(size_type, const value_type &) -> void;
+	auto erase(size_type) -> void;
 
-		auto front() -> reference;
-		auto front() const -> const_reference;
-		auto back() -> reference;
-		auto back() const -> const_reference;
+	auto front() -> reference;
+	auto front() const -> const_reference;
+	auto back() -> reference;
+	auto back() const -> const_reference;
 
-		auto at(size_type) -> reference;
-		auto at(size_type) const -> const_reference;
+	auto at(size_type) -> reference;
+	auto at(size_type) const -> const_reference;
 
-		/* special version for iterator */
-		auto at_spec(size_type) -> pair<Self*, pointer*>;
-		auto at_spec(size_type) const -> pair<const Self*, const pointer*>;
-	};
+	/* special version for iterator */
+	auto at_spec(size_type) -> pair<Self*, pointer*>;
+	auto at_spec(size_type) const -> pair<const Self*, const pointer*>;
+};
 
 /* impl deque<T>::Block { */
 
@@ -498,71 +498,71 @@ public:
 
 
 
-	template <typename T>
-	class deque<T>::iterator {
-		friend class deque;
-		friend class const_iterator;
+template <typename T>
+class deque<T>::iterator {
+	friend class deque;
+	friend class const_iterator;
 
-		using Up		= deque;
-		using Self		= iterator;
-		using loc_type	= pair<Up::Block*, pointer*>;
+	using Up		= deque;
+	using Self		= iterator;
+	using loc_type	= pair<Up::Block*, pointer*>;
 
-		size_type index;
-		loc_type loc;
-		Up *par;
+	size_type index;
+	loc_type loc;
+	Up *par;
 
-		auto eval_invalid() const -> bool { return par == nullptr or index >= par->size(); }
-		auto exist_invalid() const -> bool { return par == nullptr or index > par->size(); }
-		auto set_loc() -> void {
-			if (par == nullptr) return;
-			if (index >= par->size()) loc = par->end().loc;
-			else loc = par->__data->succ->at_spec(index);
-		}
+	auto eval_invalid() const -> bool { return par == nullptr or index >= par->size(); }
+	auto exist_invalid() const -> bool { return par == nullptr or index > par->size(); }
+	auto set_loc() -> void {
+		if (par == nullptr) return;
+		if (index >= par->size()) loc = par->end().loc;
+		else loc = par->__data->succ->at_spec(index);
+	}
 
-		iterator(size_type __index, Up *__par)
-			: index(__index), par(__par) { set_loc(); }
-		iterator(size_type __index, loc_type __loc, Up *__par)
-			: index(__index), loc(__loc), par(__par) { }
+	iterator(size_type __index, Up *__par)
+		: index(__index), par(__par) { set_loc(); }
+	iterator(size_type __index, loc_type __loc, Up *__par)
+		: index(__index), loc(__loc), par(__par) { }
 
-	public:
-		iterator(): index(-1), loc(nullptr, nullptr), par(nullptr) { }
-		iterator(Self &&) = default;
-		iterator(const Self &) = default;
+public:
+	iterator(): index(-1), loc(nullptr, nullptr), par(nullptr) { }
+	iterator(Self &&) = default;
+	iterator(const Self &) = default;
 
-		auto operator = (const Self &) -> Self& = default;
+	auto operator = (const Self &) -> Self& = default;
 
-		/**
-		 * return a new iterator which pointer n-next elements
-		 *   if there are not enough elements, iterator becomes invalid
-		 * as well as operator-
-		 */
-		auto operator + (difference_type diff) const -> Self;
-		auto operator - (difference_type diff) const -> Self;
-		auto operator += (difference_type diff) -> Self& { return *this = *this + diff; }
-		auto operator -= (difference_type diff) -> Self& { return *this = *this - diff; }
+	/**
+	 * return a new iterator which pointer n-next elements
+	 *   if there are not enough elements, iterator becomes invalid
+	 * as well as operator-
+	 */
+	auto operator + (difference_type diff) const -> Self;
+	auto operator - (difference_type diff) const -> Self;
+	auto operator += (difference_type diff) -> Self& { return *this = *this + diff; }
+	auto operator -= (difference_type diff) -> Self& { return *this = *this - diff; }
 
-		// return the distance between two iterator,
-		// if these two iterators points to different vectors, throw invaild_iterator.
-		auto operator - (const Self &rhs) const -> difference_type {
-			if (par != rhs.par) throw invalid_iterator();
-			return static_cast<difference_type>(index - rhs.index);
-		}
+	// return the distance between two iterator,
+	// if these two iterators points to different vectors, throw invaild_iterator.
+	auto operator - (const Self &rhs) const -> difference_type {
+		if (par != rhs.par) throw invalid_iterator();
+		return static_cast<difference_type>(index - rhs.index);
+	}
 
-		auto operator ++ (int) -> Self { Self tmp = *this; *this = *this + 1; return tmp; }
-		auto operator -- (int) -> Self { Self tmp = *this; *this = *this - 1; return tmp; }
+	auto operator ++ (int) -> Self { Self tmp = *this; *this = *this + 1; return tmp; }
+	auto operator -- (int) -> Self { Self tmp = *this; *this = *this - 1; return tmp; }
 
-		auto operator ++ () -> Self& { return *this = *this + 1; }
-		auto operator -- () -> Self& { return *this = *this - 1; }
+	auto operator ++ () -> Self& { return *this = *this + 1; }
+	auto operator -- () -> Self& { return *this = *this - 1; }
 
-		auto operator * () const -> reference;
-		auto operator -> () const -> pointer;
+	auto operator * () const -> reference;
+	auto operator -> () const -> pointer;
 
-		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
-		auto operator == (const const_iterator &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
+	auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
+	auto operator == (const const_iterator &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
 
-		auto operator != (const Self &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
-		auto operator != (const const_iterator &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
-	};
+	auto operator != (const Self &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
+	auto operator != (const const_iterator &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
+};
 
 /* impl deque<T>::iterator { */
 
@@ -616,72 +616,72 @@ public:
 
 
 
-	template <typename T>
-	class deque<T>::const_iterator {
-		friend class deque;
-		friend class iterator;
+template <typename T>
+class deque<T>::const_iterator {
+	friend class deque;
+	friend class iterator;
 
-		using Up		= deque;
-		using Self		= const_iterator;
-		using loc_type	= pair<const Up::Block*, const pointer*>;
+	using Up		= deque;
+	using Self		= const_iterator;
+	using loc_type	= pair<const Up::Block*, const pointer*>;
 
-		size_type index;
-		loc_type loc;
-		const Up *par;
+	size_type index;
+	loc_type loc;
+	const Up *par;
 
-		auto eval_invalid() const -> bool { return par == nullptr or index >= par->size(); }
-		auto exist_invalid() const -> bool { return par == nullptr or index > par->size(); }
-		auto set_loc() -> void {
-			if (par == nullptr) return;
-			if (index >= par->size()) loc = par->cend().loc;
-			else loc = par->__data->succ->at_spec(index);
-		}
+	auto eval_invalid() const -> bool { return par == nullptr or index >= par->size(); }
+	auto exist_invalid() const -> bool { return par == nullptr or index > par->size(); }
+	auto set_loc() -> void {
+		if (par == nullptr) return;
+		if (index >= par->size()) loc = par->cend().loc;
+		else loc = par->__data->succ->at_spec(index);
+	}
 
-		const_iterator(size_type __index, const Up *__par)
-			: index(__index), par(__par) { set_loc(); }
-		const_iterator(size_type __index, loc_type __loc, const Up *__par)
-			: index(__index), loc(__loc), par(__par) { }
+	const_iterator(size_type __index, const Up *__par)
+		: index(__index), par(__par) { set_loc(); }
+	const_iterator(size_type __index, loc_type __loc, const Up *__par)
+		: index(__index), loc(__loc), par(__par) { }
 
-	public:
-		const_iterator(): index(-1), loc(nullptr, nullptr), par(nullptr) { }
-		const_iterator(Self &&) = default;
-		const_iterator(const Self &) = default;
-		const_iterator(const iterator &other): index(other.index), loc(loc), par(other.par) { }
+public:
+	const_iterator(): index(-1), loc(nullptr, nullptr), par(nullptr) { }
+	const_iterator(Self &&) = default;
+	const_iterator(const Self &) = default;
+	const_iterator(const iterator &other): index(other.index), loc(loc), par(other.par) { }
 
-		auto operator = (const Self &) -> Self& = default;
+	auto operator = (const Self &) -> Self& = default;
 
-		/**
-		 * return a new iterator which pointer n-next elements
-		 *   if there are not enough elements, iterator becomes invalid
-		 * as well as operator-
-		 */
-		auto operator + (difference_type diff) const -> Self;
-		auto operator - (difference_type diff) const -> Self;
-		auto operator += (difference_type diff) -> Self& { return *this = *this + diff; }
-		auto operator -= (difference_type diff) -> Self& { return *this = *this - diff; }
+	/**
+	 * return a new iterator which pointer n-next elements
+	 *   if there are not enough elements, iterator becomes invalid
+	 * as well as operator-
+	 */
+	auto operator + (difference_type diff) const -> Self;
+	auto operator - (difference_type diff) const -> Self;
+	auto operator += (difference_type diff) -> Self& { return *this = *this + diff; }
+	auto operator -= (difference_type diff) -> Self& { return *this = *this - diff; }
 
-		// return the distance between two iterator,
-		// if these two iterators points to different vectors, throw invaild_iterator.
-		auto operator - (const Self &rhs) const -> difference_type {
-			if (par != rhs.par) throw invalid_iterator();
-			return static_cast<difference_type>(index - rhs.index);
-		}
+	// return the distance between two iterator,
+	// if these two iterators points to different vectors, throw invaild_iterator.
+	auto operator - (const Self &rhs) const -> difference_type {
+		if (par != rhs.par) throw invalid_iterator();
+		return static_cast<difference_type>(index - rhs.index);
+	}
 
-		auto operator ++ (int) -> Self { Self tmp = *this; *this = *this + 1; return tmp; }
-		auto operator -- (int) -> Self { Self tmp = *this; *this = *this - 1; return tmp; }
+	auto operator ++ (int) -> Self { Self tmp = *this; *this = *this + 1; return tmp; }
+	auto operator -- (int) -> Self { Self tmp = *this; *this = *this - 1; return tmp; }
 
-		auto operator ++ () -> Self& { return *this = *this + 1; }
-		auto operator -- () -> Self& { return *this = *this - 1; }
+	auto operator ++ () -> Self& { return *this = *this + 1; }
+	auto operator -- () -> Self& { return *this = *this - 1; }
 
-		auto operator * () const -> const_reference;
-		auto operator -> () const -> const_pointer;
+	auto operator * () const -> const_reference;
+	auto operator -> () const -> const_pointer;
 
-		auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
-		auto operator == (const iterator &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
+	auto operator == (const Self &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
+	auto operator == (const iterator &rhs) const -> bool { return par == rhs.par and index == rhs.index; }
 
-		auto operator != (const Self &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
-		auto operator != (const iterator &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
-	};
+	auto operator != (const Self &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
+	auto operator != (const iterator &rhs) const -> bool { return par != rhs.par or index != rhs.index; }
+};
 
 /* impl deque<T>::const_iterator { */
 
