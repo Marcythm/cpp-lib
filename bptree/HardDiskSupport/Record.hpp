@@ -17,6 +17,11 @@ namespace HardDisk {
 		Record(Self &&other): offset(other.offset) { other.offset = static_cast<offset_type>(-1); }
 		Record(const Self &other): offset(other.offset) {}
 
+		auto operator = (Self &&rhs) -> Self& {
+			offset = rhs.offset;
+			rhs.offset = static_cast<offset_type>(-1);
+			return *this;
+		}
 		auto operator = (const Self &rhs) -> Self& { return offset = rhs.offset, *this; }
 
 		auto empty() const -> bool { return offset == static_cast<offset_type>(-1); }
