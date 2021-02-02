@@ -12,19 +12,19 @@ namespace HardDisk {
 		offset_type offset;
 
 
-		Record(): offset(static_cast<offset_type>(-1)) {}
+		Record(): offset(-1) {}
 		Record(offset_type __offset): offset(__offset) {}
-		Record(Self &&other): offset(other.offset) { other.offset = static_cast<offset_type>(-1); }
+		Record(Self &&other): offset(other.offset) { other.offset = -1; }
 		Record(const Self &other): offset(other.offset) {}
 
 		auto operator = (Self &&rhs) -> Self& {
 			offset = rhs.offset;
-			rhs.offset = static_cast<offset_type>(-1);
+			rhs.offset = -1;
 			return *this;
 		}
 		auto operator = (const Self &rhs) -> Self& { return offset = rhs.offset, *this; }
 
-		auto empty() const -> bool { return offset == static_cast<offset_type>(-1); }
+		auto empty() const -> bool { return offset == -1; }
 
 		template <typename T>
 		auto get(IO &io) const -> T {
@@ -81,7 +81,7 @@ namespace HardDisk {
 
 	// 	auto operator = (const Self &rhs) -> Self& { return offset = rhs.offset, *this; }
 
-	//	auto empty() const -> bool { return offset == static_cast<offset_type>(-1); }
+	//	auto empty() const -> bool { return offset == -1; }
 
 	// 	auto save(IO &io, const value_type &value) const -> void {
 	// 		io.seek(offset);
