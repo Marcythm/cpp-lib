@@ -1,0 +1,17 @@
+root = true
+
+[*.cpp]
+indent_style = tab
+indent_size = 4
+
+[*.hpp]
+indent_style = tab
+indent_size = 4
+
+[*.c]
+indent_style = tab
+indent_size = 4
+
+[*.h]
+indent_style = tab
+indent_size = 4
