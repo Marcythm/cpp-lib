@@ -28,7 +28,7 @@ private:
     } header;
 
     key_compare key_leq;
-    auto key_eq(const key_type &lhs, const key_type &rhs) const -> bool { return key_leq(lhs, rhs) and key_leq(rhs, lhs); }
+    auto key_eq(const key_type &lhs, const key_type &rhs) const -> bool { return not (key_leq(lhs, rhs) or key_leq(rhs, lhs)); }
 
     HardDisk::IO datafile, indexfile;
     HardDisk::RecordPool<value_type> datapool;
@@ -38,6 +38,8 @@ private:
 
 public:
     bptree(const str & = str("data.bin"), const str & = str("index.bin"));
+
+    auto end() const -> iterator { return iterator(const_cast<Self*>(this), leaf_node(), -1); }
 
 private:
     auto insert(leaf_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
@@ -476,10 +478,12 @@ public:
     auto operator ++ () -> Self& { return *this = *this + 1; }
     auto operator -- () -> Self& { return *this = *this - 1; }
 
-    auto operator * () const -> data_proxy;
+    auto operator * () const -> value_type;
+    // auto operator * () const -> data_proxy;
 
     auto operator == (const Self &rhs) const -> bool {
-        return up == rhs.up and loc == rhs.loc and std::memcmp(std::addressof(u), std::addressof(rhs.u), sizeof(u)) == 0;
+        if (up != rhs.up or loc != rhs.loc) return false;
+        return loc == -1 or std::memcmp(std::addressof(u), std::addressof(rhs.u), sizeof(u)) == 0;
     }
     auto operator != (const Self &rhs) const -> bool { return not (*this == rhs); }
 };
@@ -515,9 +519,14 @@ public:
     }
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::iterator::operator * () const -> data_proxy {
-        return data_proxy(u.rec[loc], up->datafile);
+    auto bptree<Key, Value, Compare>::iterator::operator * () const -> value_type {
+        if (loc < 0 or loc >= u.size) throw "dereference nullptr";
+        return u.rec[loc].template get<value_type>(up->datafile);
     }
+    // template <typename Key, typename Value, typename Compare>
+    // auto bptree<Key, Value, Compare>::iterator::operator * () const -> data_proxy {
+    //     return data_proxy(u.rec[loc], up->datafile);
+    // }
 
 /* } */
 

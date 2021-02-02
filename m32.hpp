@@ -8,11 +8,11 @@ private:
 
 public:
 	m32(): v(0) {}
-	m32(const i32 &val): v(val) {}
+	m32(const i32 &val): v(val % p) {}
 	m32(const m32 &rhs): v(rhs.v) {}
 
 	operator i32&() { return v; }
-	auto operator&() -> i32* { return &v; }
+	auto operator & () -> i32* { return &v; }
 
 	auto operator = (const m32 &rhs) -> m32& { return v = rhs.v, *this; }
 
