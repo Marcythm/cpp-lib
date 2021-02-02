@@ -21,6 +21,7 @@ namespace HardDisk {
 		IO(Self &&other): file(other.file) { other.file = nullptr; }
 		IO(const Self &) = delete;
 
+		~IO() { if (file != nullptr) std::fclose(file); }
 
 		auto open(const char *filename) -> bool {
 			if (file = std::fopen(filename, "r+b"); file == nullptr)

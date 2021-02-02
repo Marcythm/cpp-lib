@@ -29,7 +29,7 @@ namespace HardDisk {
 		}
 
 		template <typename T>
-		auto save(IO &io, const T &value) const -> Self {
+		auto save(IO &io, const T &value) -> Self {
 			if (empty())
 				return Record(offset = io.append(value));
 			io.seek(offset);

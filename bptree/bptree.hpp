@@ -40,18 +40,18 @@ public:
     bptree(const str & = str("data.bin"), const str & = str("index.bin"));
 
 private:
-    auto insert(leaf_node &u, const key_type &key, const value_type &value) -> bool;
+    auto insert(leaf_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
     auto erase(leaf_node &u, const key_type &key) -> bool;
-    auto find(leaf_node &u, const key_type &key) -> value_type;
+    auto find(leaf_node &u, const key_type &key) -> iterator;
 
-    auto insert(internal_node &u, const key_type &key, const value_type &value) -> bool;
+    auto insert(internal_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
     auto erase(internal_node &u, const key_type &key) -> bool;
-    auto find(internal_node &u, const key_type &key) -> value_type;
+    auto find(internal_node &u, const key_type &key) -> iterator;
 
 public:
-    auto insert(const key_type &key, const value_type &value) -> void;
+    auto insert(const key_type &key, const value_type &value) -> iterator;
     auto erase(const key_type &key) -> void;
-    auto find(const key_type &key) -> value_type;
+    auto find(const key_type &key) -> iterator;
 };
 
 
@@ -76,7 +76,7 @@ struct bptree<Key, Value, Compare>::leaf_node {
 /* impl bptree<Key, Value, Compare>::leaf_node { */
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::insert(leaf_node &u, const key_type &key, const value_type &value) -> bool {
+    auto bptree<Key, Value, Compare>::insert(leaf_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool> {
         size_type loc = std::lower_bound(u.key, u.key + u.size, key, key_leq) - u.key;
         if (loc < u.size and key_eq(key, u.key[loc]))
             u.rec[loc].save(datafile, value);
@@ -86,8 +86,8 @@ struct bptree<Key, Value, Compare>::leaf_node {
             u.key[loc] = key;
             u.rec[loc].save(datafile, value);
             ++u.size;
-            return true;
-        } return false;
+            return std::make_pair(iterator(this, u, loc), true);
+        } return std::make_pair(iterator(this, u, loc), false);
     }
 
     template <typename Key, typename Value, typename Compare>
@@ -103,11 +103,11 @@ struct bptree<Key, Value, Compare>::leaf_node {
     }
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::find(leaf_node &u, const key_type &key) -> value_type {
-        size_type loc = std::lower_bound(u.key, u.ley + u.size, key, key_leq) - u.key;
+    auto bptree<Key, Value, Compare>::find(leaf_node &u, const key_type &key) -> iterator {
+        size_type loc = std::lower_bound(u.key, u.key + u.size, key, key_leq) - u.key;
         if (loc < u.size and key_eq(key, u.key[loc]))
-            return u.rec[loc].template get<value_type>();
-        // return value_type();
+            return iterator(this, u, loc);
+        return iterator();
     }
 
 /* } */
@@ -134,12 +134,13 @@ struct bptree<Key, Value, Compare>::internal_node {
 /* impl bptree<Key, Value, Compare>::internal_node { */
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::insert(internal_node &u, const key_type &key, const value_type &value) -> bool {
+    auto bptree<Key, Value, Compare>::insert(internal_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool> {
         size_type loc = std::upper_bound(u.key, u.key + u.size, key, key_leq) - u.key;
+        std::pair<iterator, bool> result;
         if (u.sub_is_leaf) {
             leaf_node v;
             u.sub[loc].load(indexfile, v);
-            bool modified = insert(v, key, value);
+            result = insert(v, key, value);
 
             /* if full then split */
             if (v.full()) {
@@ -167,14 +168,15 @@ struct bptree<Key, Value, Compare>::internal_node {
                     w.right.save(indexfile, t);
                 }
 
-                return true;
+                return result.second = true, result;
             }
-            if (modified)
-                u.sub[loc].save(indexfile, v);
+            if (result.second)
+                u.sub[loc].save(indexfile, v),
+                result.second = false;
         } else {
             internal_node v;
             u.sub[loc].load(indexfile, v);
-            bool modified = insert(v, key, value);
+            result = insert(v, key, value);
 
             /* if full then split */
             if (v.full()) {
@@ -186,17 +188,18 @@ struct bptree<Key, Value, Compare>::internal_node {
                 w.sub_is_leaf = v.sub_is_leaf;
 
                 std::move_backward(u.key + loc,     u.key + u.size, u.key + u.size + 1);
-                std::move_backward(u.rec + loc + 1, u.rec + u.size, u.rec + u.size + 1);
+                std::move_backward(u.sub + loc + 1, u.sub + u.size, u.sub + u.size + 1);
                 u.key[loc] = std::move(v.key[FACTOR / 2]);
                 ++u.size;
 
                 u.sub[loc].save(indexfile, v);
-                u.sub[loc + 1] = internal_node_pool.alloc().save(index, w);
-                return true;
+                u.sub[loc + 1] = internal_node_pool.alloc().save(indexfile, w);
+                return result.second = true, result;
             }
-            if (modified)
-                u.sub[loc].save(indexfile, v);
-        } return false;
+            if (result.second)
+                u.sub[loc].save(indexfile, v),
+                result.second = false;
+        } return result;
     }
 
     template <typename Key, typename Value, typename Compare>
@@ -205,7 +208,7 @@ struct bptree<Key, Value, Compare>::internal_node {
         if (u.sub_is_leaf) {
             leaf_node v;
             u.sub[loc].load(indexfile, v);
-            bool modified = erase(v, key);
+            bool result = erase(v, key);
 
             if (v.scanty()) {
                 /* try to get key from surplus brothers */
@@ -300,12 +303,12 @@ struct bptree<Key, Value, Compare>::internal_node {
                     return true;
                 }
             }
-            if (modified)
+            if (result)
                 u.sub[loc].save(indexfile, v);
         } else {
             internal_node v;
             u.sub[loc].load(indexfile, v);
-            bool modified = erase(v, key);
+            bool result = erase(v, key);
 
             if (v.scanty()) {
                 /* try to get key from surplus brothers */
@@ -384,14 +387,14 @@ struct bptree<Key, Value, Compare>::internal_node {
                     return true;
                 }
             }
-            if (modified)
+            if (result)
                 u.sub[loc].save(indexfile, v);
         } return false;
     }
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::find(internal_node &u, const key_type &key) -> value_type {
-        size_type loc = std::upper_bound(u.key, u.ley + u.size, key, key_leq) - u.key;
+    auto bptree<Key, Value, Compare>::find(internal_node &u, const key_type &key) -> iterator {
+        size_type loc = std::upper_bound(u.key, u.key + u.size, key, key_leq) - u.key;
         if (u.sub_is_leaf) {
             leaf_node v;
             u.sub[loc].load(indexfile, v);
@@ -424,23 +427,24 @@ struct bptree<Key, Value, Compare>::internal_node {
     }
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::insert(const key_type &key, const value_type &value) -> void {
-        insert(root, key, value);
-        if (root.size > 0) {
+    auto bptree<Key, Value, Compare>::insert(const key_type &key, const value_type &value) -> iterator {
+        auto result = insert(root, key, value);
+        if (result.second) {
+            header.root.save(indexfile, root);
             internal_node newroot;
             newroot.sub[0] = header.root;
             header.root = internal_node_pool.alloc().save(indexfile, newroot);
             indexfile.seek(0);
             indexfile.write(header);
             root = newroot;
-        }
+        } return result.first;
     }
 
     template <typename Key, typename Value, typename Compare>
     auto bptree<Key, Value, Compare>::erase(const key_type &key) -> void { erase(root, key); }
 
     template <typename Key, typename Value, typename Compare>
-    auto bptree<Key, Value, Compare>::find(const key_type &key) -> value_type { return find(root, key); }
+    auto bptree<Key, Value, Compare>::find(const key_type &key) -> iterator { return find(root, key); }
 
 /* } */
 
@@ -527,5 +531,5 @@ struct bptree<Key, Value, Compare>::iterator::data_proxy {
     ~data_proxy() { rec.save(io, value); }
 
     operator value_type&() { return value; }
-    operator const value_type&() { return value; }
+    operator const value_type&() const { return value; }
 };
