@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../config.hpp"
+#include "config.hpp"
 
 #define C_STYLE_HardDiskIO
 
@@ -10,7 +10,7 @@ namespace HardDisk {
 
 	struct IO {
 		using Self			= IO;
-		using offset_type	= u32;
+		using offset_type	= i64;
 
 		std::FILE *file;
 
@@ -73,23 +73,28 @@ namespace HardDisk {
 		std::fstream file;
 
 		IO(): file() { }
-		explicit IO(const char *filename): file(filename) { }
-		explicit IO(const str &filename): file(filename) { }
+		explicit IO(const char *filename) { open(filename); }
+		explicit IO(const str &filename) { open(filename.c_str()); }
 
 		IO(Self &&other): file(std::move(other.file)) { }
 		IO(const Self &) = delete;
 
+		~IO() { if (file.is_open()) file.close(); }
 
-		auto open(const char *filename) -> void { file.open(filename); }
-		auto open(const str &filename) -> void {file.open(filename); }
+		auto open(const char *filename) -> bool {
+			if (file.open(filename, std::ios::in | std::ios::out | std::ios::binary); file.is_open())
+				return true;
+			return file.open(filename, "w+b"), false;
+		}
+		auto open(const str &filename) -> bool { return open(filename.c_str()); }
 
 		auto is_open() const -> bool { return file.is_open(); }
 		auto close() -> void { file.close(); }
 		auto flush() -> void { file.flush(); }
 
-		auto tell() const -> offset_type { return file.tellp(); }
-		auto seek(offset_type offset) -> void { file.seekp(offset); }
-		auto seek_end() -> void { file.seekp(0, std::fstream::end); }
+		auto tell() const -> offset_type { return file.tellg(); }
+		auto seek(offset_type offset) -> void { file.seekg(offset, std::fstream::beg); }
+		auto seek_end() -> void { file.seekg(0, std::fstream::end); }
 
 		template <typename T>
 		auto read() -> T {
