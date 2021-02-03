@@ -5,8 +5,9 @@
 // #include "debugger.hpp"
 #include "types.hpp"
 
+using namespace __cpplib::__config;
 
-using tree_t = bptree<Key, Value>;
+using tree_t = __cpplib::bptree<Key, Value>;
 tree_t tree;
 
 auto main(i32, const char **argv) -> i32 {

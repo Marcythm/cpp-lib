@@ -2,6 +2,8 @@
 
 #include "config.hpp"
 
+using namespace __cpplib::__config;
+
 struct Timer {
 	clock_t time;
 	auto start() -> void { time = clock(); }

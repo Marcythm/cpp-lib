@@ -12,7 +12,7 @@ test: clean insert find value erase
 	make clean
 
 %: %.cpp
-	clang++ -Wall -Wextra -Wshadow -std=c++2a -stdlib=libc++ -O2 $^ -o $@ -I.. -I../.. -I../../..
+	clang++ -Wall -Wextra -Wshadow -std=c++2a -stdlib=libc++ -O2 $^ -o $@ -I.. -I../../../src -I../../../src/bptree
 
 clean: clean_database
 	rm -rf insert find value erase input

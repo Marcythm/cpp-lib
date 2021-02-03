@@ -4,6 +4,10 @@
 #include "HardDiskSupport/IO.hpp"
 #include "HardDiskSupport/Record.hpp"
 
+namespace __cpplib {
+
+using namespace __config;
+
 template <typename Key, typename Value, typename Compare = std::less<Key>>
 class bptree {
     static constexpr i32 FACTOR = 100;
@@ -574,3 +578,5 @@ struct bptree<Key, Value, Compare>::iterator::data_proxy {
     operator value_type&() { return value; }
     operator const value_type&() const { return value; }
 };
+
+}

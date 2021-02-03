@@ -2,6 +2,10 @@
 
 #include "config.hpp"
 
+namespace __cpplib {
+
+using namespace __config;
+
 #define C_STYLE_HardDiskIO
 
 namespace HardDisk {
@@ -123,5 +127,7 @@ namespace HardDisk {
 	};
 
 #endif
+
+}
 
 }

@@ -2,6 +2,8 @@
 
 #include "config.hpp"
 
+using namespace __cpplib::__config;
+
 struct Rng {
 	std::random_device seed;
 	std::mt19937 rng;

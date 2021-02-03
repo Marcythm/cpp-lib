@@ -1,5 +1,8 @@
-using i32 = int;
-using i64 = long long;
+#include "config.hpp"
+
+namespace __cpplib {
+
+using namespace __config;
 
 template <const i32 p>
 class m32 {
@@ -54,3 +57,5 @@ public:
 	template <typename T> friend auto operator *= (T &lhs, const m32 &rhs) -> T& { return lhs = m32(lhs) * rhs; }
 	template <typename T> friend auto operator /= (T &lhs, const m32 &rhs) -> T& { return lhs = m32(lhs) / rhs; }
 };
+
+}

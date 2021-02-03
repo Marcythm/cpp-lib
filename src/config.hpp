@@ -138,6 +138,10 @@
 
 /* ---------- type aliases ---------- */
 
+namespace __cpplib {
+
+namespace __config {
+
 using i8	=	signed char;		// int8_t;
 using i16	=	signed short;		// int16_t;
 using i32	=	signed int;			// int32_t;
@@ -168,3 +172,7 @@ template <typename T>
 #ifdef _LIBCPP_STRING
 	using str = std::string;
 #endif
+
+}
+
+}

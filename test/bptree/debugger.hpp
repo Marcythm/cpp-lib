@@ -3,9 +3,11 @@
 #include "config.hpp"
 #include "bptree.hpp"
 
+using namespace __cpplib::__config;
+
 template <typename Key, typename Value>
 struct debugger {
-	using tree_t = bptree<Key, Value>;
+	using tree_t = __cpplib::bptree<Key, Value>;
 
 	tree_t *tree;
 	const str indent_base;

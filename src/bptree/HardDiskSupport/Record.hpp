@@ -3,6 +3,10 @@
 #include "config.hpp"
 #include "IO.hpp"
 
+namespace __cpplib {
+
+using namespace __config;
+
 namespace HardDisk {
 
 	struct Record {
@@ -95,5 +99,7 @@ namespace HardDisk {
 	// 		io.read(value);
 	// 	}
 	// };
+
+}
 
 }

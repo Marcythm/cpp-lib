@@ -3,6 +3,8 @@
 #include "config.hpp"
 #include "random.hpp"
 
+using namespace __cpplib::__config;
+
 struct Key {
 	i32 val;
 	Key(): val(0) {}
