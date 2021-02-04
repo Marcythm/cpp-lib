@@ -50,15 +50,15 @@ public:
     auto end() const -> iterator { return iterator(const_cast<Self*>(this), leaf_node(), -1); }
 
 private:
-    auto insert (leaf_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
-    auto erase  (leaf_node &u, const key_type &key) -> bool;
-    auto find   (leaf_node &u, const key_type &key) -> iterator;
-    auto value  (leaf_node &u, const key_type &key) -> value_type;
+    auto insert (leaf_node &self, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
+    auto erase  (leaf_node &self, const key_type &key) -> bool;
+    auto find   (leaf_node &self, const key_type &key) -> iterator;
+    auto value  (leaf_node &self, const key_type &key) -> value_type;
 
-    auto insert (internal_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
-    auto erase  (internal_node &u, const key_type &key) -> bool;
-    auto find   (internal_node &u, const key_type &key) -> iterator;
-    auto value  (internal_node &u, const key_type &key) -> value_type;
+    auto insert (internal_node &self, const key_type &key, const value_type &value) -> std::pair<iterator, bool>;
+    auto erase  (internal_node &self, const key_type &key) -> bool;
+    auto find   (internal_node &self, const key_type &key) -> iterator;
+    auto value  (internal_node &self, const key_type &key) -> value_type;
 
 public:
     auto insert (const key_type &key, const value_type &value) -> iterator;
@@ -89,45 +89,45 @@ struct bptree<Key, Value, Compare, FACTOR>::leaf_node {
 /* impl bptree<Key, Value, Compare, FACTOR>::leaf_node { */
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::insert(leaf_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool> {
-        size_type loc = std::lower_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (loc < u.size and key_eq(key, u.key[loc]))
-            u.rec[loc].save(datafile, value);
+    auto bptree<Key, Value, Compare, FACTOR>::insert(leaf_node &self, const key_type &key, const value_type &value) -> std::pair<iterator, bool> {
+        size_type loc = std::lower_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (loc < self.size and key_eq(key, self.key[loc]))
+            self.rec[loc].save(datafile, value);
         else {
-            std::move_backward(u.key + loc, u.key + u.size, u.key + u.size + 1);
-            std::move_backward(u.rec + loc, u.rec + u.size, u.rec + u.size + 1);
-            u.key[loc] = key;
-            u.rec[loc] = datapool.alloc().save(datafile, value);
-            ++u.size;
-            return std::make_pair(iterator(this, u, loc), true);
-        } return std::make_pair(iterator(this, u, loc), false);
+            std::move_backward(self.key + loc, self.key + self.size, self.key + self.size + 1);
+            std::move_backward(self.rec + loc, self.rec + self.size, self.rec + self.size + 1);
+            self.key[loc] = key;
+            self.rec[loc] = datapool.alloc().save(datafile, value);
+            ++self.size;
+            return std::make_pair(iterator(this, self, loc), true);
+        } return std::make_pair(iterator(this, self, loc), false);
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::erase(leaf_node &u, const key_type &key) -> bool {
-        size_type loc = std::lower_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (loc < u.size and key_eq(key, u.key[loc])) {
-            datapool.dealloc(u.rec[loc]);
-            std::move(u.key + loc + 1, u.key + u.size, u.key + loc);
-            std::move(u.rec + loc + 1, u.rec + u.size, u.rec + loc);
-            --u.size;
+    auto bptree<Key, Value, Compare, FACTOR>::erase(leaf_node &self, const key_type &key) -> bool {
+        size_type loc = std::lower_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (loc < self.size and key_eq(key, self.key[loc])) {
+            datapool.dealloc(self.rec[loc]);
+            std::move(self.key + loc + 1, self.key + self.size, self.key + loc);
+            std::move(self.rec + loc + 1, self.rec + self.size, self.rec + loc);
+            --self.size;
             return true;
         } return false;
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::find(leaf_node &u, const key_type &key) -> iterator {
-        size_type loc = std::lower_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (loc < u.size and key_eq(key, u.key[loc]))
-            return iterator(this, u, loc);
+    auto bptree<Key, Value, Compare, FACTOR>::find(leaf_node &self, const key_type &key) -> iterator {
+        size_type loc = std::lower_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (loc < self.size and key_eq(key, self.key[loc]))
+            return iterator(this, self, loc);
         return iterator();
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::value(leaf_node &u, const key_type &key) -> value_type {
-        size_type loc = std::lower_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (loc < u.size and key_eq(key, u.key[loc]))
-            return u.rec[loc].template get<value_type>(datafile);
+    auto bptree<Key, Value, Compare, FACTOR>::value(leaf_node &self, const key_type &key) -> value_type {
+        size_type loc = std::lower_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (loc < self.size and key_eq(key, self.key[loc]))
+            return self.rec[loc].template get<value_type>(datafile);
         throw "in bptree::value(): key not found";
     }
 
@@ -155,12 +155,12 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
 /* impl bptree<Key, Value, Compare, FACTOR>::internal_node { */
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::insert(internal_node &u, const key_type &key, const value_type &value) -> std::pair<iterator, bool> {
-        size_type loc = std::upper_bound(u.key, u.key + u.size, key, key_le) - u.key;
+    auto bptree<Key, Value, Compare, FACTOR>::insert(internal_node &self, const key_type &key, const value_type &value) -> std::pair<iterator, bool> {
+        size_type loc = std::upper_bound(self.key, self.key + self.size, key, key_le) - self.key;
         std::pair<iterator, bool> result;
-        if (u.sub_is_leaf) {
+        if (self.sub_is_leaf) {
             leaf_node *v = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             result = insert(*v, key, value);
 
             /* if full then split */
@@ -171,18 +171,18 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                 w->size = v->size - (FACTOR / 2);
                 v->size = (FACTOR / 2);
 
-                std::move_backward(u.key + loc,     u.key + u.size,     u.key + u.size + 1);
-                std::move_backward(u.sub + loc + 1, u.sub + u.size + 1, u.sub + u.size + 2);
-                u.key[loc] = w->key[0];
-                ++u.size;
+                std::move_backward(self.key + loc,     self.key + self.size,     self.key + self.size + 1);
+                std::move_backward(self.sub + loc + 1, self.sub + self.size + 1, self.sub + self.size + 2);
+                self.key[loc] = w->key[0];
+                ++self.size;
 
 
-                w->left = u.sub[loc];
+                w->left = self.sub[loc];
                 w->right = std::move(v->right);
-                u.sub[loc + 1] = leaf_node_pool.alloc().save(indexfile, *w);
+                self.sub[loc + 1] = leaf_node_pool.alloc().save(indexfile, *w);
 
-                v->right = u.sub[loc + 1];
-                u.sub[loc].save(indexfile, *v);
+                v->right = self.sub[loc + 1];
+                self.sub[loc].save(indexfile, *v);
 
                 if (not w->right.empty()) {
                     leaf_node *t = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
@@ -196,12 +196,12 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                 return result.second = true, result;
             }
             if (result.second)
-                u.sub[loc].save(indexfile, *v),
+                self.sub[loc].save(indexfile, *v),
                 result.second = false;
             std::free(v);
         } else {
             internal_node *v = static_cast<internal_node*>(std::malloc(sizeof(internal_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             result = insert(*v, key, value);
 
             /* if full then split */
@@ -213,35 +213,35 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                 v->size = (FACTOR / 2);
                 w->sub_is_leaf = v->sub_is_leaf;
 
-                std::move_backward(u.key + loc,     u.key + u.size,     u.key + u.size + 1);
-                std::move_backward(u.sub + loc + 1, u.sub + u.size + 1, u.sub + u.size + 2);
-                u.key[loc] = std::move(v->key[(FACTOR / 2)]);
-                ++u.size;
+                std::move_backward(self.key + loc,     self.key + self.size,     self.key + self.size + 1);
+                std::move_backward(self.sub + loc + 1, self.sub + self.size + 1, self.sub + self.size + 2);
+                self.key[loc] = std::move(v->key[(FACTOR / 2)]);
+                ++self.size;
 
-                u.sub[loc].save(indexfile, *v);
-                u.sub[loc + 1] = internal_node_pool.alloc().save(indexfile, *w);
+                self.sub[loc].save(indexfile, *v);
+                self.sub[loc + 1] = internal_node_pool.alloc().save(indexfile, *w);
                 std::free(v); std::free(w);
                 return result.second = true, result;
             }
             if (result.second)
-                u.sub[loc].save(indexfile, *v),
+                self.sub[loc].save(indexfile, *v),
                 result.second = false;
             std::free(v);
         } return result;
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::erase(internal_node &u, const key_type &key) -> bool {
-        size_type loc = std::upper_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (u.sub_is_leaf) {
+    auto bptree<Key, Value, Compare, FACTOR>::erase(internal_node &self, const key_type &key) -> bool {
+        size_type loc = std::upper_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (self.sub_is_leaf) {
             leaf_node *v = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             bool result = erase(*v, key);
 
             if (v->scanty()) {
                 if (0 < loc) {
                     leaf_node *w = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
-                    u.sub[loc - 1].load(indexfile, *w);
+                    self.sub[loc - 1].load(indexfile, *w);
 
                     if (w->surplus()) {
                         /* get key from surplus brothers */
@@ -252,8 +252,8 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                         v->rec[0] = std::move(w->rec[w->size]);
                         ++v->size;
 
-                        u.key[loc - 1] = v->key[0];
-                        u.sub[loc].save(indexfile, *v);
+                        self.key[loc - 1] = v->key[0];
+                        self.sub[loc].save(indexfile, *v);
                     } else {
                         /* merge with brothers */
                         std::move(v->key, v->key + v->size, w->key + w->size);
@@ -270,19 +270,19 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                             std::free(t);
                         }
 
-                        u.sub[loc].save(indexfile, *v);
-                        leaf_node_pool.dealloc(u.sub[loc]);
-                        std::move(u.key + loc,     u.key + u.size,     u.key + loc - 1);
-                        std::move(u.sub + loc + 1, u.sub + u.size + 1, u.sub + loc    );
-                        --u.size;
+                        self.sub[loc].save(indexfile, *v);
+                        leaf_node_pool.dealloc(self.sub[loc]);
+                        std::move(self.key + loc,     self.key + self.size,     self.key + loc - 1);
+                        std::move(self.sub + loc + 1, self.sub + self.size + 1, self.sub + loc    );
+                        --self.size;
                     }
-                    u.sub[loc - 1].save(indexfile, *w);
+                    self.sub[loc - 1].save(indexfile, *w);
                     std::free(v); std::free(w);
                     return true;
                 }
-                if (loc < u.size) {
+                if (loc < self.size) {
                     leaf_node *w = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
-                    u.sub[loc + 1].load(indexfile, *w);
+                    self.sub[loc + 1].load(indexfile, *w);
 
                     if (w->surplus()) {
                         v->key[v->size] = std::move(w->key[0]);
@@ -292,8 +292,8 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                         std::move(w->rec + 1, w->rec + w->size, w->rec);
                         --w->size;
 
-                        u.key[loc] = v->key[v->size - 1];
-                        u.sub[loc + 1].save(indexfile, *w);
+                        self.key[loc] = v->key[v->size - 1];
+                        self.sub[loc + 1].save(indexfile, *w);
                     } else {
                         std::move(w->key, w->key + w->size, v->key + v->size);
                         std::move(w->rec, w->rec + w->size, v->rec + v->size);
@@ -309,108 +309,108 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
                             std::free(t);
                         }
 
-                        u.sub[loc + 1].save(indexfile, *w);
-                        leaf_node_pool.dealloc(u.sub[loc + 1]);
-                        std::move(u.key + loc + 1, u.key + u.size,     u.key + loc    );
-                        std::move(u.sub + loc + 2, u.sub + u.size + 1, u.sub + loc + 1);
-                        --u.size;
+                        self.sub[loc + 1].save(indexfile, *w);
+                        leaf_node_pool.dealloc(self.sub[loc + 1]);
+                        std::move(self.key + loc + 1, self.key + self.size,     self.key + loc    );
+                        std::move(self.sub + loc + 2, self.sub + self.size + 1, self.sub + loc + 1);
+                        --self.size;
                     }
 
-                    u.sub[loc].save(indexfile, *v);
+                    self.sub[loc].save(indexfile, *v);
                     std::free(v); std::free(w);
                     return true;
                 }
             }
-            if (result) u.sub[loc].save(indexfile, *v);
+            if (result) self.sub[loc].save(indexfile, *v);
             std::free(v);
         } else {
             internal_node *v = static_cast<internal_node*>(std::malloc(sizeof(internal_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             bool result = erase(*v, key);
 
             if (v->scanty()) {
                 if (0 < loc) {
                     internal_node *w = static_cast<internal_node*>(std::malloc(sizeof(internal_node)));
-                    u.sub[loc - 1].load(indexfile, *w);
+                    self.sub[loc - 1].load(indexfile, *w);
 
                     if (w->surplus()) {
                         /* get key from surplus brothers */
                         std::move_backward(v->key, v->key + v->size,     v->key + v->size + 1);
                         std::move_backward(v->sub, v->sub + v->size + 1, v->sub + v->size + 2);
                         ++v->size;
-                        v->key[0] = std::move(u.key[loc - 1]);
-                        u.key[loc - 1] = std::move(w->key[w->size - 1]);
+                        v->key[0] = std::move(self.key[loc - 1]);
+                        self.key[loc - 1] = std::move(w->key[w->size - 1]);
                         v->sub[0] = std::move(w->sub[w->size]);
                         --w->size;
 
-                        u.sub[loc].save(indexfile, *v);
+                        self.sub[loc].save(indexfile, *v);
                     } else {
                         /* merge with brothers */
-                        w->key[w->size] = std::move(u.key[loc - 1]);
+                        w->key[w->size] = std::move(self.key[loc - 1]);
                         std::move(v->key, v->key + v->size,     w->key + w->size + 1);
                         std::move(v->sub, v->sub + v->size + 1, w->sub + w->size + 1);
                         w->size += v->size + 1;
                         v->size = 0;
 
-                        internal_node_pool.dealloc(u.sub[loc]);
-                        std::move(u.key + loc,     u.key + u.size,     u.key + loc - 1);
-                        std::move(u.sub + loc + 1, u.sub + u.size + 1, u.sub + loc    );
-                        --u.size;
+                        internal_node_pool.dealloc(self.sub[loc]);
+                        std::move(self.key + loc,     self.key + self.size,     self.key + loc - 1);
+                        std::move(self.sub + loc + 1, self.sub + self.size + 1, self.sub + loc    );
+                        --self.size;
                     }
 
-                    u.sub[loc - 1].save(indexfile, *w);
+                    self.sub[loc - 1].save(indexfile, *w);
                     std::free(v); std::free(w);
                     return true;
                 }
-                if (loc < u.size) {
+                if (loc < self.size) {
                     internal_node *w = static_cast<internal_node*>(std::malloc(sizeof(internal_node)));
-                    u.sub[loc + 1].load(indexfile, *w);
+                    self.sub[loc + 1].load(indexfile, *w);
 
                     if (w->surplus()) {
-                        v->key[v->size] = std::move(u.key[loc]);
-                        u.key[loc] = std::move(w->key[0]);
+                        v->key[v->size] = std::move(self.key[loc]);
+                        self.key[loc] = std::move(w->key[0]);
                         v->sub[v->size + 1] = std::move(w->sub[0]);
                         ++v->size;
                         std::move(w->key + 1, w->key + w->size,     w->key);
                         std::move(w->sub + 1, w->sub + w->size + 1, w->sub);
                         --w->size;
 
-                        u.sub[loc + 1].save(indexfile, *w);
+                        self.sub[loc + 1].save(indexfile, *w);
                     } else {
-                        v->key[v->size] = std::move(u.key[loc]);
+                        v->key[v->size] = std::move(self.key[loc]);
                         std::move(w->key, w->key + w->size,     v->key + v->size + 1);
                         std::move(w->sub, w->sub + w->size + 1, v->sub + v->size + 1);
                         v->size += w->size + 1;
                         w->size = 0;
 
-                        internal_node_pool.dealloc(u.sub[loc + 1]);
-                        std::move(u.key + loc + 1, u.key + u.size,     u.key + loc    );
-                        std::move(u.sub + loc + 2, u.sub + u.size + 1, u.sub + loc + 1);
-                        --u.size;
+                        internal_node_pool.dealloc(self.sub[loc + 1]);
+                        std::move(self.key + loc + 1, self.key + self.size,     self.key + loc    );
+                        std::move(self.sub + loc + 2, self.sub + self.size + 1, self.sub + loc + 1);
+                        --self.size;
                     }
 
-                    u.sub[loc].save(indexfile, *v);
+                    self.sub[loc].save(indexfile, *v);
                     std::free(v); std::free(w);
                     return true;
                 }
             }
-            if (result) u.sub[loc].save(indexfile, *v);
+            if (result) self.sub[loc].save(indexfile, *v);
             std::free(v);
         } return false;
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::find(internal_node &u, const key_type &key) -> iterator {
-        size_type loc = std::upper_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (u.sub_is_leaf) {
+    auto bptree<Key, Value, Compare, FACTOR>::find(internal_node &self, const key_type &key) -> iterator {
+        size_type loc = std::upper_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (self.sub_is_leaf) {
             leaf_node *v = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             auto tmp = find(*v, key);
             std::free(v);
             return tmp;
         } else {
             internal_node *v = static_cast<internal_node*>(std::malloc(sizeof(internal_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             auto tmp = find(*v, key);
             std::free(v);
             return tmp;
@@ -418,17 +418,17 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    auto bptree<Key, Value, Compare, FACTOR>::value(internal_node &u, const key_type &key) -> value_type {
-        size_type loc = std::upper_bound(u.key, u.key + u.size, key, key_le) - u.key;
-        if (u.sub_is_leaf) {
+    auto bptree<Key, Value, Compare, FACTOR>::value(internal_node &self, const key_type &key) -> value_type {
+        size_type loc = std::upper_bound(self.key, self.key + self.size, key, key_le) - self.key;
+        if (self.sub_is_leaf) {
             leaf_node *v = static_cast<leaf_node*>(std::malloc(sizeof(leaf_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             auto tmp = value(*v, key);
             std::free(v);
             return tmp;
         } else {
             internal_node *v = static_cast<internal_node*>(std::malloc(sizeof(internal_node)));
-            u.sub[loc].load(indexfile, *v);
+            self.sub[loc].load(indexfile, *v);
             auto tmp = value(*v, key);
             std::free(v);
             return tmp;
@@ -496,13 +496,13 @@ class bptree<Key, Value, Compare, FACTOR>::iterator {
     struct data_proxy;
 
     Up          *up;
-    leaf_node   u;
+    leaf_node   self;
     i32         loc;
 
 
 public:
     iterator(): loc(-1) {}
-    iterator(Up *__up, leaf_node node, i32 __loc): up(__up), u(node), loc(__loc) {}
+    iterator(Up *__up, leaf_node node, i32 __loc): up(__up), self(node), loc(__loc) {}
 
     auto operator + (difference_type diff) -> Self;
     auto operator - (difference_type diff) -> Self;
@@ -520,7 +520,7 @@ public:
 
     auto operator == (const Self &rhs) const -> bool {
         if (up != rhs.up or loc != rhs.loc) return false;
-        return loc == -1 or std::memcmp(std::addressof(u), std::addressof(rhs.u), sizeof(u)) == 0;
+        return loc == -1 or std::memcmp(std::addressof(self), std::addressof(rhs.self), sizeof(self)) == 0;
     }
     auto operator != (const Self &rhs) const -> bool { return not (*this == rhs); }
 };
@@ -532,10 +532,10 @@ public:
 		if (diff < 0) return *this - (-diff);
         iterator dst(*this);
         for ( ; ; ) {
-            difference_type rest = dst.u.size - dst.loc;
+            difference_type rest = dst.self.size - dst.loc;
             if (diff < rest) return dst.loc += diff, dst;
-            if (dst.u.right.empty()) return iterator();
-            dst.u = dst.u.right.template get<leaf_node>(up->indexfile);
+            if (dst.self.right.empty()) return iterator();
+            dst.self = dst.self.right.template get<leaf_node>(up->indexfile);
             dst.loc = 0;
             diff -= rest;
         }
@@ -548,22 +548,22 @@ public:
         for ( ; ; ) {
             difference_type rest = dst.loc;
             if (diff <= rest) return dst.loc -= diff, dst;
-            if (dst.u.left.empty()) return iterator();
-            dst.u = dst.u.left.template get<leaf_node>(up->indexfile);
-            dst.loc = dst.u.size;
+            if (dst.self.left.empty()) return iterator();
+            dst.self = dst.self.left.template get<leaf_node>(up->indexfile);
+            dst.loc = dst.self.size;
             diff -= rest;
         }
     }
 
     // template <typename Key, typename Value, typename Compare, i32 FACTOR>
     // auto bptree<Key, Value, Compare, FACTOR>::iterator::operator * () const -> value_type {
-    //     if (loc < 0 or loc >= u.size) throw "dereference nullptr";
-    //     return u.rec[loc].template get<value_type>(up->datafile);
+    //     if (loc < 0 or loc >= self.size) throw "dereference nullptr";
+    //     return self.rec[loc].template get<value_type>(up->datafile);
     // }
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
     auto bptree<Key, Value, Compare, FACTOR>::iterator::operator * () const -> data_proxy {
-        if (loc < 0 or loc >= i32(u.size)) throw "dereference nullptr";
-        return data_proxy(up->datafile, u.rec[loc]);
+        if (loc < 0 or loc >= i32(self.size)) throw "dereference nullptr";
+        return data_proxy(up->datafile, self.rec[loc]);
     }
 
 /* } */
