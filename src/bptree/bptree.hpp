@@ -10,9 +10,10 @@ using namespace __config;
 
 template <typename Key, typename Value, typename Compare = std::less<Key>, i32 FACTOR = 100>
 class bptree {
-    static_assert(std::is_trivially_copyable<Key>::value, "the Key type is not trivially copyable");
-    static_assert(std::is_trivially_copyable<Value>::value, "the Value type is not trivially copyable");
-    static_assert(FACTOR > 3, "FACTOR of bptree too small");
+    static_assert(std::is_trivially_copyable_v<Key>, "template argument Key is not trivially copyable");
+    static_assert(std::is_trivially_copyable_v<Value>, "template argument Value is not trivially copyable");
+    static_assert(std::is_convertible_v<Compare, std::function<bool(Key, Key)>>, "template argument Compare can't be used as a compare function");
+    static_assert(FACTOR > 10, "FACTOR of bptree too small");
 
     using Self              = bptree;
 
