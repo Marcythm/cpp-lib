@@ -79,9 +79,9 @@ struct bptree<Key, Value, Compare, FACTOR>::leaf_node {
     key_type            key[MAX_KEY_NUM + 1];
     HardDisk::Record    rec[MAX_REC_NUM + 1];
 
-    auto scanty () const -> bool { return size < MIN_KEY_NUM; }
+    auto full()    const -> bool { return size > MAX_KEY_NUM; }
+    auto scanty()  const -> bool { return size < MIN_KEY_NUM; }
     auto surplus() const -> bool { return size > MIN_KEY_NUM; }
-    auto full   () const -> bool { return size > MAX_KEY_NUM; }
 
     leaf_node(): size(0) {}
 };
@@ -145,9 +145,9 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
     key_type            key[MAX_KEY_NUM + 1];
     HardDisk::Record    sub[MAX_SUB_NUM + 1];
 
-    auto scanty () const -> bool { return size < MIN_KEY_NUM; }
+    auto full()    const -> bool { return size > MAX_KEY_NUM; }
+    auto scanty()  const -> bool { return size < MIN_KEY_NUM; }
     auto surplus() const -> bool { return size > MIN_KEY_NUM; }
-    auto full   () const -> bool { return size > MAX_KEY_NUM; }
 
     internal_node(): sub_is_leaf(false), size(0) {}
 };
