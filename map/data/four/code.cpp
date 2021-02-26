@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <map>
 #include <ctime>
+#include <random>
 #include "exceptions.hpp"
 #include "map.hpp"
 
@@ -212,7 +213,7 @@ void tester3() {
 			srcmap.insert(sjtu::map<IntA, IntB, Compare>::value_type(x, tmp));
 			console.showProgress();
 		}
-		std::random_shuffle(ret.begin(), ret.end());
+		std::shuffle(ret.begin(), ret.end(), std::mt19937(std::random_device()()));
 		for (auto x : ret) {
 			if (stdmap.find(x) != stdmap.end()) {
 				srcmap.erase(srcmap.find(x));
@@ -341,7 +342,7 @@ void tester7() {
 		}
 		std::map<IntA, IntB, Compare> tmp1(stdmap);
 		sjtu::map<IntA, IntB, Compare> tmp2(srcmap);
-		std::random_shuffle(ret.begin(), ret.end());
+		std::shuffle(ret.begin(), ret.end(), std::mt19937(std::random_device()()));
 		for (int i = 0; i < MAXC; i++) {
 			if (stdmap.find(ret[i]) != stdmap.end()) {
 				srcmap.erase(srcmap.find(ret[i]));
@@ -392,7 +393,7 @@ void tester8() {
 		tmp1 = stdmap;
 		sjtu::map<IntA, IntB, Compare> tmp2;
 		tmp2 = srcmap;
-		std::random_shuffle(ret.begin(), ret.end());
+		std::shuffle(ret.begin(), ret.end(), std::mt19937(std::random_device()()));
 		for (int i = 0; i < MAXC; i++) {
 			if (stdmap.find(ret[i]) != stdmap.end()) {
 				srcmap.erase(srcmap.find(ret[i]));

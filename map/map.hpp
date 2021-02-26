@@ -9,216 +9,207 @@
 #include <cstddef>
 #include "exceptions.hpp"
 
+#include "rbtree.hpp"
+
 namespace sjtu {
 
 // #define STlite_NOEXCEPT
 
 template <typename T1, typename T2>
 class pair {
-	using Self = pair;
+    using Self = pair;
 public:
-	using first_type	= T1;
-	using second_type	= T2;
+    using first_type    = T1;
+    using second_type   = T2;
 
-	T1 first;
-	T2 second;
+    T1 first;
+    T2 second;
 
-	constexpr pair(): first(), second() { }
-	constexpr pair(const T1 &x, const T2 &y): first(x), second(y) { }
-	template <typename U1, typename U2>
-		constexpr pair(const U1 &x, const U2 &y)
-			: first(x), second(y) { }
-	// template <typename U1, typename U2>
-	// 	constexpr pair(U1 &&x, U2 &&y)
-	// 		: first(std::move(x)), second(std::move(y)) { }
+    constexpr pair(): first(), second() { }
+    constexpr pair(const T1 &x, const T2 &y): first(x), second(y) { }
+    template <typename U1, typename U2>
+        constexpr pair(const U1 &x, const U2 &y)
+            : first(x), second(y) { }
+    // template <typename U1, typename U2>
+    //     constexpr pair(U1 &&x, U2 &&y)
+    //         : first(std::move(x)), second(std::move(y)) { }
 
-	template <typename U1, typename U2>
-		constexpr pair(const pair<U1, U2> &other)
-			: first(other.first), second(other.second) { }
-	// template <typename U1, typename U2>
-	// 	constexpr pair(pair<U1, U2> &&other)
-	// 		: first(std::move(other.first)), second(std::move(other.second)) { }
+    template <typename U1, typename U2>
+        constexpr pair(const pair<U1, U2> &other)
+            : first(other.first), second(other.second) { }
+    // template <typename U1, typename U2>
+    //     constexpr pair(pair<U1, U2> &&other)
+    //         : first(std::move(other.first)), second(std::move(other.second)) { }
 
-	template <typename U1, typename U2>
-		constexpr auto operator = (const pair<U1, U2> &other) -> Self&
-			{ first = other.first; second = other.second; return *this; }
-	// template <typename U1, typename U2>
-	// 	constexpr auto operator = (pair<U1, U2> &&other) -> Self&
-	// 		{ first = std::move(other.first), second = std::move(other.second); return *this; }
+    template <typename U1, typename U2>
+        constexpr auto operator = (const pair<U1, U2> &other) -> Self&
+            { first = other.first; second = other.second; return *this; }
+    // template <typename U1, typename U2>
+    //     constexpr auto operator = (pair<U1, U2> &&other) -> Self&
+    //         { first = std::move(other.first), second = std::move(other.second); return *this; }
 };
+
+
+template <typename Value, typename Ref, typename Ptr, typename Up, typename Up_ptr>
+struct map_iterator {
+    using Self              = map_iterator;
+    using internal_type     = rbtree_iterator<Value, Ref, Ptr>;
+
+    using value_type        = typename internal_type::value_type;
+    using reference         = typename internal_type::reference;
+    using pointer           = typename internal_type::pointer;
+    using difference_type   = typename internal_type::difference_type;
+    using iterator_category = typename internal_type::iterator_category;
+
+    using iterator          = map_iterator<value_type, value_type&, value_type*, Up, Up*>;
+    using const_iterator    = map_iterator<value_type, const value_type&, const value_type*, Up, const Up*>;
+
+    internal_type it;
+    Up_ptr up;
+
+public:
+    map_iterator() = default;
+    map_iterator(internal_type _it, Up_ptr _up): it(_it), up(_up) {}
+
+    template <typename _Ref, typename _Ptr, typename _Up_ptr>
+    map_iterator(map_iterator<Value, _Ref, _Ptr, Up, _Up_ptr> _it): it(_it.it), up(_it.up) {}
+
+    auto operator++ () -> Self& {
+        if (it == up->cend().it) throw invalid_iterator();
+        ++it; return *this;
+    }
+    auto operator-- () -> Self& {
+        if (it == up->cbegin().it) throw invalid_iterator();
+        --it; return *this;
+    }
+
+    auto operator++ (i32) -> Self {
+        if (it == up->cend().it) throw invalid_iterator();
+        return Self(it++, up);
+    }
+    auto operator-- (i32) -> Self {
+        if (it == up->cbegin().it) throw invalid_iterator();
+        return Self(it--, up);
+    }
+
+    auto operator*  () const -> reference { return *it; }
+    auto operator-> () const noexcept -> pointer { return std::addressof(operator*()); }
+};
+
+template <typename Val, typename Up, typename Refl, typename Ptrl, typename Up_ptrl, typename Refr, typename Ptrr, typename Up_ptrr>
+inline auto operator== (
+    const map_iterator<Val, Refl, Ptrl, Up, Up_ptrl> &lhs,
+    const map_iterator<Val, Refr, Ptrr, Up, Up_ptrr> &rhs
+) -> bool {
+    return lhs.up == rhs.up and lhs.it == rhs.it;
+}
+
+template <typename Val, typename Up, typename Refl, typename Ptrl, typename Up_ptrl, typename Refr, typename Ptrr, typename Up_ptrr>
+inline auto operator!= (
+    const map_iterator<Val, Refl, Ptrl, Up, Up_ptrl> &lhs,
+    const map_iterator<Val, Refr, Ptrr, Up, Up_ptrr> &rhs
+) -> bool {
+    return lhs.up != rhs.up or lhs.it != rhs.it;
+}
 
 
 template <class Key, class T, class Compare = std::less<Key>>
 class map {
-	using Self = map;
-public:
-	using key_typ			= Key;
-	using mapped_type		= T;
-	using key_compare		= Compare;
-	using value_type		= pair<const Key, T>;
-	using reference			= value_type&;
-	using const_reference	= const value_type&;
-	using pointer			= value_type*;
-	using const_pointer		= const value_type*;
-	using size_type			= size_t;
-	using difference_type	= std::ptrdiff_t;
+    using Self = map;
 
-	class iterator;
-	class const_iterator;
+public:
+    using key_type              = Key;
+    using mapped_type           = T;
+    using key_compare           = Compare;
+    using value_type            = pair<const Key, T>;
 
 private:
-
+    struct KoV {
+        auto operator() (const value_type &value) const -> const key_type& {
+            return value.first;
+        }
+    };
+    using internal_type         = rbtree<key_type, value_type, KoV, Compare>;
 
 public:
-	map();
-	map(const Self &other);
-	~map();
+    using reference             = typename internal_type::reference;
+    using const_reference       = typename internal_type::const_reference;
+    using pointer               = typename internal_type::pointer;
+    using const_pointer         = typename internal_type::const_pointer;
+    using size_type             = typename internal_type::size_type;
+    using difference_type       = typename internal_type::difference_type;
 
-	auto operator = (const Self &other) -> Self&;
-	/**
-	 * TODO
-	 * access specified element with bounds checking
-	 * Returns a reference to the mapped value of the element with key equivalent to key.
-	 * If no such element exists, an exception of type `index_out_of_bound'
-	 */
-	auto at(const Key &key) -> mapped_type&;
-	auto at(const Key &key) const -> const mapped_type&;
-	/**
-	 * TODO
-	 * access specified element
-	 * Returns a reference to the value that is mapped to a key equivalent to key,
-	 *   performing an insertion if such key does not already exist.
-	 */
-	auto operator[](const Key &key) -> mapped_type&;
-	/**
-	 * behave like at() throw index_out_of_bound if such key does not exist.
-	 */
-	auto operator[](const Key &key) const -> const mapped_type&;
-	/**
-	 * return a iterator to the beginning
-	 */
-	auto begin() -> iterator;
-	auto cbegin() const -> const_iterator;
-	/**
-	 * return a iterator to the end
-	 * in fact, it returns past-the-end.
-	 */
-	auto end() -> iterator;
-	auto cend() const -> const_iterator;
-	/**
-	 * checks whether the container is empty
-	 * return true if empty, otherwise false.
-	 */
-	auto empty() const -> bool;
-	/**
-	 * returns the number of elements.
-	 */
-	auto size() const -> size_type;
-	/**
-	 * clears the contents
-	 */
-	auto clear() -> void;
-	/**
-	 * insert an element.
-	 * return a pair, the first of the pair is
-	 *   the iterator to the new element (or the element that prevented the insertion),
-	 *   the second one is true if insert successfully, or false.
-	 */
-	auto insert(const value_type &value) -> pair<iterator, bool>;
-	/**
-	 * erase the element at pos.
-	 *
-	 * throw if pos pointed to a bad element (pos == this->end() || pos points an element out of this)
-	 */
-	auto erase(iterator pos) -> void;
-	/**
-	 * Returns the number of elements with key
-	 *   that compares equivalent to the specified argument,
-	 *   which is either 1 or 0
-	 *     since this container does not allow duplicates.
-	 * The default method of check the equivalence is !(a < b || b > a)
-	 */
-	auto count(const Key &key) const -> size_type;
-	/**
-	 * Finds an element with key equivalent to key.
-	 * key value of the element to search for.
-	 * Iterator to an element with key equivalent to key.
-	 *   If no such element is found, past-the-end (see end()) iterator is returned.
-	 */
-	auto find(const Key &key) -> iterator;
-	auto find(const Key &key) const -> const_iterator;
+    using iterator              = map_iterator<value_type, reference, pointer, Self, Self*>;
+    using const_iterator        = map_iterator<value_type, const_reference, const_pointer, Self, const Self*>;
+
+private:
+    internal_type tree;
+
+public:
+    map(const Compare &cmp = Compare()): tree(cmp) {}
+    map(const Self &other): tree(other.tree) {}
+    ~map() = default;
+
+    auto operator = (const Self &other) -> Self& { tree = other.tree; return *this; }
+
+    auto at(const Key &key) -> mapped_type& {
+        typename internal_type::iterator it = tree.find(key);
+        if (it == tree.end()) {
+            throw index_out_of_bound();
+        }
+        return it->second;
+    }
+
+    auto at(const Key &key) const -> const mapped_type& {
+        typename internal_type::const_iterator it = tree.find(key);
+        if (it == tree.cend()) {
+            throw index_out_of_bound();
+        }
+        return it->second;
+    }
+
+    auto operator[](const Key &key) -> mapped_type& {
+        typename internal_type::iterator it = tree.find(key);
+        if (it == tree.end()) {
+            it = tree.insert_unique(value_type(key, mapped_type())).first;
+        }
+        return it->second;
+    }
+
+    auto operator[](const Key &key) const -> const mapped_type& { return at(key); }
+
+    auto begin() -> iterator { return iterator(tree.begin(), this); }
+    auto cbegin() const -> const_iterator { return const_iterator(tree.cbegin(), this); }
+
+    auto end() -> iterator { return iterator(tree.end(), this); }
+    auto cend() const -> const_iterator { return const_iterator(tree.cend(), this); }
+
+    auto empty() const -> bool { return tree.empty(); }
+    auto size() const -> size_type { return tree.size(); }
+    auto clear() -> void { return tree.clear(); }
+
+    auto insert(const value_type &value) -> pair<iterator, bool> {
+        std::pair<typename internal_type::iterator, bool> res = tree.insert_unique(value);
+        return pair<iterator, bool>(iterator(res.first, this), res.second);
+    }
+
+    auto erase(iterator pos) -> void {
+        if (pos.up != this or pos == end())
+            throw invalid_iterator();
+        return tree.erase(pos.it);
+    }
+
+    auto count(const Key &key) const -> size_type {
+        return tree.find(key) == tree.cend() ? 0 : 1;
+    }
+
+    auto find(const Key &key) -> iterator {
+        return iterator(tree.find(key), this);
+    }
+    auto find(const Key &key) const -> const_iterator {
+        return const_iterator(tree.find(key), this);
+    }
 };
-
-
-
-	template <class Key, class T, class Compare>
-	class map<Key, T, Compare>::iterator {
-		using Self = iterator;
-		/**
-		 * TODO add data members
-		 *   just add whatever you want.
-		 */
-	public:
-		iterator() {
-			// TODO
-		}
-		iterator(const Self &other) {
-			// TODO
-		}
-		/**
-		 * TODO iter++
-		 */
-		auto operator++(int) -> Self;
-		/**
-		 * TODO ++iter
-		 */
-		auto operator++() -> Self&;
-		/**
-		 * TODO iter--
-		 */
-		auto operator--(int) -> Self;
-		/**
-		 * TODO --iter
-		 */
-		auto operator--() -> Self&;
-		/**
-		 * a operator to check whether two iterators are same (pointing to the same memory).
-		 */
-		auto operator*() const -> reference;
-		auto operator==(const iterator &rhs) const -> bool;
-		auto operator==(const const_iterator &rhs) const -> bool;
-		/**
-		 * some other operator for iterator.
-		 */
-		auto operator!=(const iterator &rhs) const -> bool;
-		auto operator!=(const const_iterator &rhs) const -> bool;
-
-		/**
-		 * for the support of it->first.
-		 * See <http://kelvinh.github.io/blog/2013/11/20/overloading-of-member-access-operator-dash-greater-than-symbol-in-cpp/> for help.
-		 */
-		auto operator->() const noexcept -> pointer;
-	};
-
-	template <class Key, class T, class Compare>
-	class map<Key, T, Compare>::const_iterator {
-			using Self = const_iterator;
-		private:
-			// data members.
-		public:
-			const_iterator() {
-				// TODO
-			}
-			const_iterator(const Self &other) {
-				// TODO
-			}
-			const_iterator(const iterator &other) {
-				// TODO
-			}
-			// And other methods in iterator.
-			// And other methods in iterator.
-			// And other methods in iterator.
-	};
 
 }
 
