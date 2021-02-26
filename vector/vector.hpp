@@ -15,14 +15,14 @@ template <typename T>
 class vector {
     using Self = vector;
 public:
-    using value_type		= T;
-    using reference			= value_type&;
-    using const_reference	= const value_type&;
-    using pointer			= value_type*;
-    using const_pointer		= const value_type*;
+    using value_type        = T;
+    using reference         = value_type&;
+    using const_reference   = const value_type&;
+    using pointer           = value_type*;
+    using const_pointer     = const value_type*;
 
-    using size_type			= size_t;
-    using difference_type	= std::ptrdiff_t;
+    using size_type         = size_t;
+    using difference_type   = std::ptrdiff_t;
 
     class iterator;
     class const_iterator;
@@ -81,8 +81,8 @@ public:
 
     template <typename T>
     class vector<T>::iterator {
-        using Self	= iterator;
-        using Up	= vector<T>;
+        using Self  = iterator;
+        using Up    = vector<T>;
 
         friend class const_iterator;
         friend class vector<T>;
@@ -124,8 +124,8 @@ public:
 
     template <typename T>
     class vector<T>::const_iterator {
-        using Self	= const_iterator;
-        using Up	= vector<T>;
+        using Self  = const_iterator;
+        using Up    = vector<T>;
 
         friend class iterator;
         friend class vector<T>;
