@@ -1,14 +1,15 @@
 #!/bin/zsh
 
-for dir in `ls`
+dirs=('one' 'two' 'three')
+for dir in $dirs # `ls`
 do
 	if [ ! -d $dir ]; then;
 		continue
 	fi
 	cd $dir
 	echo "\033[1mstart test $dir\033[0m"
-	# clang++ code.cpp -std=c++2a -fsanitize=address -fsanitize=undefined -I.. -I../.. -o code -DDEBUG
-	clang++ code.cpp -std=c++2a -O2 -I.. -I../.. -o code -DDEBUG
+	# clang++ code.cpp -std=c++2a -fsanitize=address -fsanitize=undefined -I../../../src -o code -DDEBUG
+	clang++ code.cpp -std=c++2a -O2 -I../../../src -o code -DDEBUG
 	if [ $? -ne 0 ]; then;
 		echo "\033[1m\033[31mcompile error!\033[0m"
 		break
