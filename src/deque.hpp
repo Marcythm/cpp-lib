@@ -70,7 +70,7 @@ public:
     deque(Self &&);
     deque(const Self &);
 
-    ~deque() { clear(); delete __data; }
+    ~deque() { clear(); delete __data->prev; delete __data; }
 
     auto operator = (Self &&) -> Self&;
     auto operator = (const Self &) -> Self&;
@@ -225,15 +225,22 @@ struct deque<T>::Block {
 
     template <typename T>
     auto deque<T>::Block::append_unchecked(pointer *__src, size_type n, bool move) -> void {
-        if (move) for (; n > 0; --n) *__end++ = *__src++;
-        else for (; n > 0; --n)
-                *__end++ = new value_type(**__src++);
+        if (move) {
+            for (; n > 0; --n, ++__end, ++__src) {
+                *__end = *__src;
+                *__src = nullptr;
+            }
+        } else {
+            for (; n > 0; --n, ++__end, ++__src) {
+                *__end = new value_type(**__src);
+            }
+        }
     }
 
     template <typename T>
     auto deque<T>::Block::append(pointer *__src, size_type n, bool move) -> void {
         for (; n > 0; ) {
-            auto step = std::min(n, cap_back());
+            size_type step = std::min(n, cap_back());
             append_unchecked(__src, step, move);
             adjust();
             __src += step; n -= step;
@@ -245,14 +252,14 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (__dst < __data or __data + BLOCK_SIZE <= __dst)
             throw "call Block::move_data_in_block(): __dst not in block";
-#endif
+#endif /* STLite_NOEXCEPT */
         if (__beg < __dst) {
-            auto o_beg = __beg, o_end = __end;
+            pointer *o_beg = __beg, *o_end = __end;
             __beg = __end = __dst + size();
             for (; o_beg != o_end; )
                 *--__beg = *--o_end;
         } else if (__beg > __dst) {
-            auto o_beg = __beg, o_end = __end;
+            pointer *o_beg = __beg, *o_end = __end;
             __beg = __end = __dst;
             for (; o_beg != o_end; )
                 *__end++ = *o_beg++;
@@ -265,8 +272,10 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (__size > BLOCK_SIZE)
             throw "call Block::reserve(): reserve size too large";
-#endif
-        move_data_in_block(__data + HALF_BLOCK_SIZE - __size / 2);
+#endif /* STLite_NOEXCEPT */
+        if (__end + (__size - size()) + 10 < __beg + BLOCK_SIZE) {
+            move_data_in_block(__data + HALF_BLOCK_SIZE - __size / 2);
+        }
     }
 
 
@@ -275,7 +284,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (target == nullptr)
             throw "call Block::link() with a null pointer: this will cause original successor lost!";
-#endif
+#endif /* STLite_NOEXCEPT */
         Self *s = this, *u = target, *v = target->prev, *t = succ;
         s->succ = u; u->prev = s;
         v->succ = t; t->prev = v;
@@ -287,7 +296,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (succ->ishead() or (prev == this and succ == this))
             throw "call Block::cut() on a block without succ block: this will cut itself";
-#endif
+#endif /* STLite_NOEXCEPT */
         Self *target = succ, *u = target->succ;
         succ = u; u->prev = this;
         target->prev = target->succ = target;
@@ -299,7 +308,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (succ->ishead())
             throw "call Block::merge() on a block without succ block";
-#endif
+#endif /* STLite_NOEXCEPT */
         Self *target = cut();
         append(target->data(), target->size(), true);
         target->clear();
@@ -312,7 +321,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (loc > size())
             throw "call Block::split() with argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
         link(new Block(__beg + loc, size() - loc));
         __end = __beg + loc;
         return succ;
@@ -342,7 +351,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (empty())
             throw "call Block::pop_front() on an empty block";
-#endif
+#endif /* STLite_NOEXCEPT */
         delete *__beg++;
         adjust();
     }
@@ -352,7 +361,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
         if (empty())
             throw "call Block::pop_back() on an empty block";
-#endif
+#endif /* STLite_NOEXCEPT */
         delete *--__end;
         adjust();
     }
@@ -364,7 +373,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
             if (succ->ishead())
                 throw "in Block::insert(): argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
             return succ->insert(loc - size(), value);
         }
 
@@ -388,7 +397,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
             if (succ->ishead())
                 throw "in Block::erase(): argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
             return succ->erase(loc - size());
         }
 
@@ -410,7 +419,7 @@ struct deque<T>::Block {
     auto deque<T>::Block::front() -> reference {
 #ifndef STLite_NOEXCEPT
         if (empty()) throw "call Block::front() on an empty block";
-#endif
+#endif /* STLite_NOEXCEPT */
         return *__beg[0];
     }
 
@@ -418,7 +427,7 @@ struct deque<T>::Block {
     auto deque<T>::Block::front() const -> const_reference {
 #ifndef STLite_NOEXCEPT
         if (empty()) throw "call Block::front() on an empty block";
-#endif
+#endif /* STLite_NOEXCEPT */
         return *__beg[0];
     }
 
@@ -426,7 +435,7 @@ struct deque<T>::Block {
     auto deque<T>::Block::back() -> reference {
 #ifndef STLite_NOEXCEPT
         if (empty()) throw "call Block::back() on an empty block";
-#endif
+#endif /* STLite_NOEXCEPT */
         return *__end[-1];
     }
 
@@ -434,7 +443,7 @@ struct deque<T>::Block {
     auto deque<T>::Block::back() const -> const_reference {
 #ifndef STLite_NOEXCEPT
         if (empty()) throw "call Block::back() on an empty block";
-#endif
+#endif /* STLite_NOEXCEPT */
         return *__end[-1];
     }
 
@@ -445,7 +454,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
             if (succ->ishead())
                 throw "in Block::at(): argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
             return succ->at(loc - size());
         }
         return *__beg[loc];
@@ -457,7 +466,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
             if (succ->ishead())
                 throw "in Block::at(): argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
             return succ->at(loc - size());
         }
         return *__beg[loc];
@@ -470,7 +479,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
             if (succ->ishead())
                 throw "in Block::at_spec(): argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
             return succ->at_spec(loc - size());
         }
         return pair<Self*, pointer*>(this, __beg + loc);
@@ -482,7 +491,7 @@ struct deque<T>::Block {
 #ifndef STLite_NOEXCEPT
             if (succ->ishead())
                 throw "in Block::at_spec(): argument loc too big";
-#endif
+#endif /* STLite_NOEXCEPT */
             return succ->at_spec(loc - size());
         }
         return pair<const Self*, const pointer*>(this, __beg + loc);
@@ -751,9 +760,10 @@ public:
     template <typename T>
     deque<T>::deque(Self &&other): __size(other.__size),
         __data(new Block(typename Block::noinit_tag())) {
-            __data->prev = other.__data->prev;
-            __data->succ = other.__data->succ;
+            __data->prev = other.__data->prev; __data->prev->succ = __data;
+            __data->succ = other.__data->succ; __data->succ->prev = __data;
             other.__data->prev = other.__data->succ = other.__data;
+            other.__data->link(new Block);
         }
 
     template <typename T>
@@ -763,17 +773,23 @@ public:
     template <typename T>
     auto deque<T>::operator = (Self &&rhs) -> Self& {
         if (this == std::addressof(rhs)) return *this;
-        clear(); delete __data; __size = rhs.__size;
-        __data->prev = rhs.__data->prev;
-        __data->succ = rhs.__data->succ;
+        clear();
+        __size = rhs.__size;
+        delete __data->prev;
+        __data->prev = rhs.__data->prev; __data->prev->succ = __data;
+        __data->succ = rhs.__data->succ; __data->succ->prev = __data;
         rhs.__data->prev = rhs.__data->succ = rhs.__data;
+        rhs.__data->link(new Block);
         return *this;
     }
 
     template <typename T>
     auto deque<T>::operator = (const Self &rhs) -> Self& {
         if (this == std::addressof(rhs)) return *this;
-        clear(); delete __data; __size = rhs.__size;
+        clear();
+        __size = rhs.__size;
+        delete __data->prev;
+        delete __data;
         __data = rhs.__data->clone();
         return *this;
     }
@@ -800,7 +816,7 @@ public:
         }
 #else
             return __data->at(loc);
-#endif
+#endif /* STLite_NOEXCEPT */
     }
 
     template <typename T>
@@ -816,7 +832,7 @@ public:
         }
 #else
             return __data->at(loc);
-#endif
+#endif /* STLite_NOEXCEPT */
     }
 
 
@@ -881,4 +897,4 @@ public:
 
 }
 
-#endif
+#endif /* SJTU_DEQUE_HPP */
