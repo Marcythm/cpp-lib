@@ -1,6 +1,10 @@
 #pragma once
 #include "config.hpp"
 
+namespace __cpplib {
+
+using namespace __config;
+
 namespace IO {
     // configs
     namespace Config {
@@ -11,14 +15,32 @@ namespace IO {
     }
 
     namespace Utility {
-        template <size_t TABLESIZE, size_t... TruePos>
+        template <size_t TABLESIZE, char... TrueIndex>
         struct TruthTable {
-            static_assert(((TruePos < TABLESIZE) && ...), "TruePos > TABLESIZE");
+            static_assert(((TrueIndex < TABLESIZE) && ...), "TrueIndex > TABLESIZE");
 
-            bool value[TABLESIZE];
+            bool value[TABLESIZE] = {false};
 
-            constexpr TruthTable(): value() {
-                (value[TruePos] = ... = true);
+            constexpr TruthTable() {
+                if constexpr (sizeof...(TrueIndex) > 0) {
+                    (value[TrueIndex] = ... = true);
+                }
+            }
+            template <typename T>
+            constexpr TruthTable(const std::initializer_list<T> &list): TruthTable() {
+                for (const T &e: list)
+                    value[static_cast<size_t>(e)] = true;
+            }
+
+            template <typename T>
+            constexpr auto set(const T &index) -> void {
+                value[static_cast<size_t>(index)] = true;
+            }
+
+            template <typename T>
+            constexpr auto set(const std::initializer_list<T> &list) -> void {
+                for (const T &e: list)
+                    value[static_cast<size_t>(e)] = true;
             }
 
             template <typename T>
@@ -27,19 +49,25 @@ namespace IO {
     }
 
     namespace Input {
-        static constexpr Utility::TruthTable<256, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'> is_digit{};
-        // static constexpr Utility::TruthTable<256, '+', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'> is_digit_or_sign{};
+        using Utility::TruthTable;
 
-        template <char... Separators>
+        static constexpr TruthTable<256> is_digit{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+        // static constexpr TruthTable<256, '+', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'> is_digit_or_sign{};
+
         struct Lexer {
-            static constexpr Utility::TruthTable<256, ' ', '\t', '\n', '\r', '\f', '\v', Separators...> is_separator{};
-
             FILE *inputfile = stdin;
+            TruthTable<256> is_separator{' ', '\t', '\n', '\r', '\f', '\v'};
+
             char buf[Config::BUFSIZE];
             const char *ibuf = buf, *tbuf = buf;
 
-            Lexer() = default;
-            Lexer(FILE *_inputfile): inputfile(_inputfile) {}
+            template <typename... Ts>
+            Lexer(const Ts&... separators):
+                is_separator{' ', '\t', '\n', '\r', '\f', '\v', static_cast<char>(separators)...} {}
+
+            template <typename... Ts>
+            Lexer(FILE *_inputfile, const Ts&... separators):
+                inputfile{_inputfile}, is_separator{' ', '\t', '\n', '\r', '\f', '\v', static_cast<char>(separators)...} {}
 
             auto peek() -> char {
                 if (ibuf < tbuf) {
@@ -76,14 +104,13 @@ namespace IO {
         };
 
 
-        /// mode greedy: parse token until the given pattern found
+        /// mode greedy: parse token until the given pattern be found
         /// mode once: return the default value when failed parsing into given type
         /// now on mode once
-        template <char... Separators>
         struct Parser {
-            Lexer<Separators...> *lexer;
+            Lexer *lexer;
 
-            Parser(Lexer<Separators...> *_lexer): lexer(_lexer) {}
+            Parser(Lexer *_lexer): lexer{_lexer} {}
             ~Parser() = default;
 
             template <typename T>
@@ -117,7 +144,6 @@ namespace IO {
                 // parse digits
                 if (char c = lexer->peek(); is_digit(c)) {
                     static constexpr T base = 10;
-
                     T s = static_cast<T>(c - '0');
                     while (is_digit(c = lexer->next())) {
                         s = static_cast<T>(s * base + (c - '0'));
@@ -179,9 +205,9 @@ namespace IO {
                         s += Exp[++exp] * (c - '0');
                     }
 
-                    if (is_digit(lexer->peek())) {
-                        // ignore digits after 1e-20
-                        while (is_digit(lexer->next()));
+                    // ignore digits after 1e-20
+                    while (is_digit(lexer->peek())) {
+                        lexer->consume();
                     }
                 }
 
@@ -212,10 +238,8 @@ namespace IO {
                 lexer->consume_all_separators();
                 char* s = static_cast<char*>(str);
                 *s++ = lexer->peek();
-                while (*s = lexer->next(), not (lexer->is_separator(*s))) {
-                    ++s;
-                }
-                *s = '\0';
+                while (not (lexer->is_separator(*s++ = lexer->next())));
+                s[-1] = '\0';
             }
 
             template <typename T>
@@ -242,12 +266,17 @@ namespace IO {
         };
     }
 
-    template <char... Separators>
     struct InputWrapper {
-        Input::Lexer<Separators...> lexer;
-        Input::Parser<Separators...> parser;
+        Input::Lexer lexer{};
+        Input::Parser parser{&lexer};
 
-        InputWrapper(): parser(&lexer) {}
+        template <typename... Ts>
+        InputWrapper(const Ts&... separators):
+            lexer{separators...} {}
+
+        template <typename... Ts>
+        InputWrapper(FILE *inputfile, const Ts&... separators):
+            lexer{inputfile, separators...} {}
 
         template <typename T>
         operator T() {
@@ -273,5 +302,7 @@ namespace IO {
         }
     };
 
-    InputWrapper<> input;
+    InputWrapper input{};
+}
+
 }
