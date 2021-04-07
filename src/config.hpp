@@ -1,4 +1,5 @@
 #pragma once
+#pragma message("the \"config.hpp\" header included")
 
 /* Concepts library */
 #include <concepts>
@@ -142,36 +143,25 @@ namespace __cpplib {
 
 namespace __config {
 
-using i8	=	signed char;		// int8_t;
-using i16	=	signed short;		// int16_t;
-using i32	=	signed int;			// int32_t;
-using i64	=	signed long long;	// int64_t;
+using i8    =   signed char;        // int8_t;
+using i16   =   signed short;       // int16_t;
+using i32   =   signed int;         // int32_t;
+using i64   =   signed long long;   // int64_t;
 
-using u8	=	unsigned char;		// uint8_t;
-using u16	=	unsigned short;		// uint16_t;
-using u32	=	unsigned int;		// uint32_t;
-using u64	=	unsigned long long;	// uint64_t;
+using u8    =   unsigned char;      // uint8_t;
+using u16   =   unsigned short;     // uint16_t;
+using u32   =   unsigned int;       // uint32_t;
+using u64   =   unsigned long long; // uint64_t;
 
-using f32	=	float;
-using f64	=	double;
-using f80	=	long double;
+using f32   =   float;
+using f64   =   double;
+using f80   =   long double;
 
-#ifdef _LIBCPP_MEMORY
 template <typename T>
-	using ptr = std::shared_ptr<T>;
-#else
-template <typename T>
-	using ptr = T *;
-#endif
+   using ptr = std::shared_ptr<T>;
 
-#ifdef _LIBCPP_VECTOR
 template <typename T>
-	using Vec = std::vector<T>;
-#endif
-
-#ifdef _LIBCPP_STRING
-	using str = std::string;
-#endif
+   using Vec = std::vector<T>;
 
 }
 
