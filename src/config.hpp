@@ -1,5 +1,5 @@
 #pragma once
-#pragma message("the \"config.hpp\" header included")
+#pragma message("the config.hpp header is included in your code base")
 
 /* Concepts library */
 #include <concepts>

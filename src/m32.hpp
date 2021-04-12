@@ -1,6 +1,6 @@
 #pragma once
+#pragma message("the m32.hpp header is included in your code base")
 #include "config.hpp"
-#pragma message("the \"m32.hpp\" header included")
 
 namespace __cpplib {
 

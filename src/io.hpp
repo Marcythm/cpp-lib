@@ -1,6 +1,6 @@
 #pragma once
+#pragma message("the io.hpp header included in your code base")
 #include "config.hpp"
-#pragma message("the \"io.hpp\" header included")
 
 namespace __cpplib {
 

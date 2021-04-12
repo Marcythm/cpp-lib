@@ -1,4 +1,5 @@
 #pragma once
+#pragma message("the bptree.hpp header is included in your code base")
 
 #include "config.hpp"
 #include "HardDiskSupport/IO.hpp"
@@ -44,7 +45,7 @@ private:
     internal_node *root;
 
 public:
-    bptree(const str & = str("data.bin"), const str & = str("index.bin"));
+    bptree(const std::string & = std::string("data.bin"), const std::string & = std::string("index.bin"));
     ~bptree();
 
     auto end() const -> iterator { return iterator(const_cast<Self*>(this), leaf_node(), -1); }
@@ -440,7 +441,7 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
 /* impl btree<Key, Value, Compare, FACTOR> { */
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
-    bptree<Key, Value, Compare, FACTOR>::bptree(const str &filename_data, const str &filename_index) {
+    bptree<Key, Value, Compare, FACTOR>::bptree(const std::string &filename_data, const std::string &filename_index) {
         datafile.open(filename_data);
         root = new internal_node;
         if (indexfile.open(filename_index)) {

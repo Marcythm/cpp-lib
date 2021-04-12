@@ -1,5 +1,5 @@
 #pragma once
-#pragma message("the \"rbtree.hpp\" header included")
+#pragma message("the rbtree.hpp header is included in your code base")
 #include <algorithm>
 #include <memory>
 #include <type_traits>
