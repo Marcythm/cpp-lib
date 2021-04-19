@@ -12,27 +12,27 @@ namespace HardDisk {
 
 #ifdef C_STYLE_HardDiskIO
 
-	struct IO {
-		using Self			= IO;
+	struct FileWrapper {
+		using Self			= FileWrapper;
 		using offset_type	= i64;
 
 		std::FILE *file;
 
-		IO(): file(nullptr) { }
-		explicit IO(const char *filename) { open(filename); }
-		explicit IO(const str &filename) { open(filename.c_str()); }
+		FileWrapper(): file(nullptr) { }
+		explicit FileWrapper(const char *filename) { open(filename); }
+		explicit FileWrapper(const std::string &filename) { open(filename.c_str()); }
 
-		IO(Self &&other): file(other.file) { other.file = nullptr; }
-		IO(const Self &) = delete;
+		FileWrapper(Self &&other): file(other.file) { other.file = nullptr; }
+		FileWrapper(const Self &) = delete;
 
-		~IO() { if (file != nullptr) std::fclose(file); }
+		~FileWrapper() { if (file != nullptr) std::fclose(file); }
 
 		auto open(const char *filename) -> bool {
 			if (file = std::fopen(filename, "r+b"); file == nullptr)
 				return file = std::fopen(filename, "w+b"), false;
 			return true;
 		}
-		auto open(const str &filename) -> bool { return open(filename.c_str()); }
+		auto open(const std::string &filename) -> bool { return open(filename.c_str()); }
 
 		auto is_open() const -> bool { return file != nullptr; }
 		auto close() -> void { std::fclose(file); }
@@ -70,27 +70,27 @@ namespace HardDisk {
 
 #else
 
-	struct IO {
-		using Self			= IO;
+	struct FileWrapper {
+		using Self			= FileWrapper;
 		using offset_type	= u32;
 
 		std::fstream file;
 
-		IO(): file() { }
-		explicit IO(const char *filename) { open(filename); }
-		explicit IO(const str &filename) { open(filename.c_str()); }
+		FileWrapper(): file() { }
+		explicit FileWrapper(const char *filename) { open(filename); }
+		explicit FileWrapper(const std::string &filename) { open(filename.c_str()); }
 
-		IO(Self &&other): file(std::move(other.file)) { }
-		IO(const Self &) = delete;
+		FileWrapper(Self &&other): file(std::move(other.file)) { }
+		FileWrapper(const Self &) = delete;
 
-		~IO() { if (file.is_open()) file.close(); }
+		~FileWrapper() { if (file.is_open()) file.close(); }
 
 		auto open(const char *filename) -> bool {
 			if (file.open(filename, std::ios::in | std::ios::out | std::ios::binary); file.is_open())
 				return true;
 			return file.open(filename, "w+b"), false;
 		}
-		auto open(const str &filename) -> bool { return open(filename.c_str()); }
+		auto open(const std::string &filename) -> bool { return open(filename.c_str()); }
 
 		auto is_open() const -> bool { return file.is_open(); }
 		auto close() -> void { file.close(); }

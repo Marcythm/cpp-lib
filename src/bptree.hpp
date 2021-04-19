@@ -2,7 +2,7 @@
 #pragma message("the bptree.hpp header is included in your code base")
 
 #include "config.hpp"
-#include "HardDiskSupport/IO.hpp"
+#include "HardDiskSupport/FileWrapper.hpp"
 #include "HardDiskSupport/Record.hpp"
 
 namespace __cpplib {
@@ -38,7 +38,7 @@ private:
     key_compare key_le;
     auto key_eq(const key_type &lhs, const key_type &rhs) const -> bool { return not (key_le(lhs, rhs) or key_le(rhs, lhs)); }
 
-    HardDisk::IO datafile, indexfile;
+    HardDisk::FileWrapper datafile, indexfile;
     HardDisk::RecordPool<value_type> datapool;
     HardDisk::RecordPool<leaf_node> leaf_node_pool;
     HardDisk::RecordPool<internal_node> internal_node_pool;
@@ -571,11 +571,11 @@ public:
 
 template <typename Key, typename Value, typename Compare, i32 FACTOR>
 struct bptree<Key, Value, Compare, FACTOR>::iterator::data_proxy {
-    HardDisk::IO &io;
+    HardDisk::FileWrapper &io;
     HardDisk::Record rec;
     value_type value;
 
-    data_proxy(HardDisk::IO &__io, HardDisk::Record __rec): io(__io), rec(__rec) { rec.load(io, value); }
+    data_proxy(HardDisk::FileWrapper &__io, HardDisk::Record __rec): io(__io), rec(__rec) { rec.load(io, value); }
     ~data_proxy() { rec.save(io, value); }
 
     operator value_type&() { return value; }
