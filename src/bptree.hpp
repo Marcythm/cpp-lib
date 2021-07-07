@@ -491,7 +491,6 @@ struct bptree<Key, Value, Compare, FACTOR>::internal_node {
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
     bptree<Key, Value, Compare, FACTOR>::~bptree() {
         delete root;
-        file.close();
     }
 
     template <typename Key, typename Value, typename Compare, i32 FACTOR>
